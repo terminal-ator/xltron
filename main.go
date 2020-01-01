@@ -23,6 +23,7 @@ type Statement struct {
 	BankID    int32           `json:"bank_id"`
 	Bank      Bank            `json:"bank"`
 	Company   Company         `json:"company"`
+	CompanyID int64           `json:"company_id"`
 }
 
 var DB *sql.DB
@@ -67,11 +68,13 @@ func main() {
 				&stat.CustID,
 				&stat.Deposit,
 				&stat.Withdrawl,
-				&stat.BankID); err != nil {
+				&stat.BankID,
+				&stat.CompanyID); err != nil {
 				log.Fatal(err)
 			}
 			log.Println(stat.CustID)
-			master := DB.QueryRow("Select id, cust_id, name from masters where cust_id=$1 and isMaster=1", stat.CustID)
+			master := DB.QueryRow(`Select id, cust_id, name from masters 
+			where cust_id=$1 and company_id=$2 and isMaster=1`, stat.CustID, stat.CompanyID)
 			var nMaster Master
 			dbNError := master.Scan(&nMaster.ID, &nMaster.CustID, &nMaster.Name)
 			if dbNError != nil {
@@ -110,5 +113,8 @@ func main() {
 	r.GET("/companies", GetAllCompanies)
 	r.GET("/groups", GetAllGroups)
 	r.POST("/masters", CreateMaster)
+	r.POST("/upload", PostFileUploadDirect)
+	r.POST("/parseUpload", PutCsvToDB)
+	r.GET("/uplcompany/:company", GetCompanies)
 	r.Run() // listen and serve on 0.0.0.0:8080
 }

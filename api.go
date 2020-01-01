@@ -3,6 +3,8 @@ package main
 import (
 	"fmt"
 	"log"
+	"net/http"
+	"strings"
 
 	"database/sql"
 
@@ -55,7 +57,7 @@ func PostMasterToStatement(c *gin.Context) {
 	// fmt.Println("Next line shows the packet")
 	// fmt.Println(req)
 
-	_, dbError := DB.Exec("UPDATE STATEMENT SET CUST_ID=$1 where ID=$2 and company_id=$3", req.CustID, req.StatementID, req.CompanyID)
+	_, dbError := DB.Exec("UPDATE STATEMENT SET CUST_ID=$1, updated_at = current_timestamp  where ID=$2 and company_id=$3", req.CustID, req.StatementID, req.CompanyID)
 	if dbError != nil {
 		log.Fatal(dbError)
 	}
@@ -164,11 +166,32 @@ func CreateMaster(c *gin.Context) {
 	if err != nil {
 		log.Fatalln(err)
 	}
-	_, dbError := DB.Exec(CREATE_NEW_MASTER, req.Name, req.Company, req.Group)
+	_, dbError := DB.Exec(CREATE_NEW_MASTER, strings.ToUpper(req.Name), req.Company, req.Group)
 	if dbError != nil {
 		log.Fatalln(err)
 	}
 	c.JSON(200, gin.H{
 		"message": "Successful Master creation",
 	})
+}
+
+func GetCompanies(c *gin.Context) {
+	companyID := c.Param("company")
+
+	rows, err := DB.Query("Select * from company_masters where company_id = $1", companyID)
+
+	if err != nil {
+		c.String(http.StatusBadRequest, err.Error())
+	}
+
+	var companies []UploadCompanies
+	for rows.Next() {
+		var temp UploadCompanies
+		err := rows.Scan(&temp.ID, &temp.Name, &temp.CompanyID)
+		if err != nil {
+			log.Fatal(err)
+		}
+		companies = append(companies, temp)
+	}
+	c.JSON(http.StatusOK, gin.H{"data": companies})
 }

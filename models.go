@@ -33,3 +33,17 @@ type Group struct {
 	Name     string `json:"name"`
 	CreateAt string `json:"create_at"`
 }
+
+type File struct {
+	Location  string
+	Original  string
+	Filename  string
+	Company   string
+	CompanyID int64
+}
+
+type UploadCompanies struct {
+	ID        int32  `json:"id"`
+	Name      string `json:"name"`
+	CompanyID int32  `json:"company_id"`
+}
