@@ -188,3 +188,34 @@ func PutCsvToDB(c *gin.Context) {
 	c.JSON(http.StatusOK, response)
 
 }
+
+type LedgerEntry struct {
+	CustID int64 `json:"cust_id"`
+	Cash   int64 `json:"cash"`
+}
+
+type LedgerRequest struct {
+	Date    string        `json:"date"`
+	Ledgers []LedgerEntry `json:"ledger_entry"`
+}
+
+func PutCashToLedger(c *gin.Context) {
+	company := c.Query("company")
+	var Ledger LedgerRequest
+	err := c.BindJSON(&Ledger)
+
+	if err != nil {
+		c.String(http.StatusBadRequest, err.Error())
+	}
+
+	for _, ledger := range Ledger.Ledgers {
+		_, err := DB.Exec(`Insert into ledger(cust_id,from_customer,company_id) values($1,$2,$3)`, ledger.CustID, ledger.CustID, company)
+
+		if err != nil {
+			log.Print(err.Error())
+			c.String(http.StatusInternalServerError, err.Error())
+		}
+	}
+
+	c.String(http.StatusOK, "All OK")
+}

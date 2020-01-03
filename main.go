@@ -72,7 +72,7 @@ func main() {
 				&stat.CompanyID); err != nil {
 				log.Fatal(err)
 			}
-			log.Println(stat.CustID)
+			// log.Println(stat.CustID)
 			master := DB.QueryRow(`Select id, cust_id, name from masters 
 			where cust_id=$1 and company_id=$2 and isMaster=1`, stat.CustID, stat.CompanyID)
 			var nMaster Master
