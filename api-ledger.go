@@ -199,8 +199,9 @@ type LedgerRequest struct {
 	Ledgers []LedgerEntry `json:"ledger_entry"`
 }
 
-func PutCashToLedger(c *gin.Context) {
-	company := c.Query("company")
+func PostCashToLedger(c *gin.Context) {
+	company := c.Param("company")
+	companyID, _ := strconv.Atoi(company)
 	var Ledger LedgerRequest
 	err := c.BindJSON(&Ledger)
 
@@ -208,8 +209,10 @@ func PutCashToLedger(c *gin.Context) {
 		c.String(http.StatusBadRequest, err.Error())
 	}
 
+	log.Println(Ledger)
+
 	for _, ledger := range Ledger.Ledgers {
-		_, err := DB.Exec(`Insert into ledger(cust_id,from_customer,company_id) values($1,$2,$3)`, ledger.CustID, ledger.CustID, company)
+		_, err := DB.Exec(`Insert into ledger(cust_id,ledger_type,ledger_date,from_customer,company_id) values($1,$2,$3,$4,$5)`, ledger.CustID,"Cash", Ledger.Date ,ledger.Cash, companyID)
 
 		if err != nil {
 			log.Print(err.Error())
@@ -218,4 +221,25 @@ func PutCashToLedger(c *gin.Context) {
 	}
 
 	c.String(http.StatusOK, "All OK")
+}
+
+func GetLedgerForCustID(c *gin.Context){
+	cust_id := c.Query("cust_id")
+	company := c.Query("company")
+	var CustomerLedger []Ledger
+
+	ledgers, err := DB.Query(GET_LEDGER,cust_id,company)
+	if err!=nil{
+		log.Println("Error when executing query: ", err.Error())
+		c.String(http.StatusInternalServerError, err.Error())
+	}
+	for ledgers.Next(){
+		var tempLedger Ledger
+		err := ledgers.Scan(&tempLedger.ID, &tempLedger.CustID,&tempLedger.LedgerType,&tempLedger.LedgerDate,&tempLedger.LedgerNo, &tempLedger.AssocID, &tempLedger.ToCustomer,&tempLedger.FromCustomer, &tempLedger.CompanyID)
+		if err!= nil{
+			log.Println("Error while scanning: ", err.Error())
+		}
+		CustomerLedger = append(CustomerLedger, tempLedger)
+	}
+	c.JSON(http.StatusOK,CustomerLedger)
 }

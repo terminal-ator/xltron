@@ -47,3 +47,15 @@ type UploadCompanies struct {
 	Name      string `json:"name"`
 	CompanyID int32  `json:"company_id"`
 }
+
+type Ledger struct{
+	ID int32 `json:"id"`
+	CustID int32 `json:"cust_id"`
+	LedgerType string `json:"ledger_type"`
+	LedgerDate string `json:"ledger_date"`
+	LedgerNo sql.NullString `json:"ledger_no"`
+	AssocID sql.NullInt64 `json:"assoc_id"`
+	ToCustomer sql.NullInt64 `json:"to_cust"`
+	FromCustomer sql.NullInt64 `json:"from_cust"`
+	CompanyID int32 `json:"company_id"`
+}

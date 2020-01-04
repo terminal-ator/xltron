@@ -50,3 +50,7 @@ const CREATE_FILE = `INSERT INTO files_table(location, original, filename, compa
 const INSERT_LEDGER = `Insert into ledger(master_name, ledger_type,
 				 ledger_date, ledger_no, to_customer, company_id, cust_id, master_id) 
 				 values($1, $2, $3, $4, $5, $6, $7, $8)`
+
+const GET_LEDGER = `SELECT id,cust_id, ledger_type, ledger_date, ledger_no, associated_id, 
+										to_customer, from_customer, company_id from ledger where cust_id = $1 
+										and company_id = $2`
