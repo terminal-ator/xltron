@@ -57,7 +57,7 @@ func PostMasterToStatement(c *gin.Context) {
 	// fmt.Println("Next line shows the packet")
 	// fmt.Println(req)
 
-	_, dbError := DB.Exec("UPDATE STATEMENT SET CUST_ID=$1, updated_at = current_timestamp  where ID=$2 and company_id=$3", req.CustID, req.StatementID, req.CompanyID)
+	_, dbError := DB.Exec("select upd_sttmnt_ldgr($2,$1,$3)", req.CustID, req.StatementID, req.CompanyID)
 	if dbError != nil {
 		log.Fatal(dbError)
 	}
