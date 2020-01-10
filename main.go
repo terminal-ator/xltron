@@ -58,5 +58,6 @@ func main() {
 	r.GET("/uplcompany/:company", GetCompanies)
 	r.POST("/ledger/:company", PostCashToLedger)
 	r.GET("/ledger",GetLedgerForCustID)
+	r.PUT("/ledger/:company", PutQuickToLedger)
 	r.Run() // listen and serve on 0.0.0.0:8080
 }

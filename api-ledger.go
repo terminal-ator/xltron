@@ -243,3 +243,36 @@ func GetLedgerForCustID(c *gin.Context){
 	}
 	c.JSON(http.StatusOK,CustomerLedger)
 }
+
+type QuickRequest struct{
+	Date string `json:"date"`
+	ToFrom string `json:"toFrom"`
+	Type string `json:"Type"`
+	CustID int64 `json:"cust_id"`
+	Amount int64 `json:"amount`
+}
+
+func PutQuickToLedger(c *gin.Context){
+	company := c.Param("company")
+	var req QuickRequest
+	err := c.BindJSON(&req)
+	if err != nil{
+		log.Print("Error while processing: ", err.Error())
+		c.String(http.StatusBadRequest, err.Error());
+	}
+	var withdrawl, deposit int64
+	log.Printf("To recived?: " ,req.ToFrom );
+	if req.ToFrom == "To"{ 
+		withdrawl = req.Amount 
+		}else { 
+			 deposit = req.Amount 
+		}
+
+	_, err = DB.Exec(`INSERT INTO LEDGER(cust_id, ledger_type, ledger_date, to_customer, from_customer, company_id) values($1,$2, $3, $4,$5,$6)`,req.CustID,req.Type, req.Date, withdrawl, deposit,company)
+	if err != nil{
+		log.Print("Error while saving: ", err.Error())
+		c.String(http.StatusInternalServerError, "Failed")
+	}else{
+		c.String(http.StatusOK,"Passed")
+	}
+}

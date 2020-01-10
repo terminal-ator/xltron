@@ -53,4 +53,6 @@ const INSERT_LEDGER = `Insert into ledger(master_name, ledger_type,
 
 const GET_LEDGER = `SELECT id,cust_id, ledger_type, ledger_date, ledger_no, associated_id, 
 										to_customer, from_customer, company_id from ledger where cust_id = $1 
-										and company_id = $2 order by ledger_date `
+										and company_id = $2`
+
+// const INSERT_LEDGER = `INSERT into cash_statement(cust_id, narration, date, refno, withdrawl )`
