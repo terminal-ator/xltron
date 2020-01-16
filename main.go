@@ -57,7 +57,12 @@ func main() {
 	r.POST("/parseUpload", PutCsvToDB)
 	r.GET("/uplcompany/:company", GetCompanies)
 	r.POST("/ledger/:company", PostCashToLedger)
-	r.GET("/ledger",GetLedgerForCustID)
+	r.GET("/ledger", GetLedgerForCustID)
 	r.PUT("/ledger/:company", PutQuickToLedger)
+	r.GET("/istats/:id", GetStatementById)
+
+	// new account logic
+	r.GET("/accounts/:company", GetAllAccounts)
+
 	r.Run() // listen and serve on 0.0.0.0:8080
 }

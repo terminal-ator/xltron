@@ -10,6 +10,8 @@ import (
 	"os"
 	"strings"
 	"time"
+
+	"github.com/gin-gonic/gin"
 )
 
 func CsvToMap(filePath string) (string, []string, error) {
@@ -59,4 +61,11 @@ func CsvToMap(filePath string) (string, []string, error) {
 	// return the file name and header array
 	return fileName, headerArray, nil
 
+}
+
+func ErrorHandler(err error, c *gin.Context) {
+	if err != nil {
+		log.Println("Error occured: %s", err.Error())
+		c.String(500, err.Error())
+	}
 }

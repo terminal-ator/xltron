@@ -48,14 +48,23 @@ type UploadCompanies struct {
 	CompanyID int32  `json:"company_id"`
 }
 
-type Ledger struct{
-	ID int32 `json:"id"`
-	CustID int32 `json:"cust_id"`
-	LedgerType string `json:"ledger_type"`
-	LedgerDate string `json:"ledger_date"`
-	LedgerNo sql.NullString `json:"ledger_no"`
-	AssocID sql.NullInt64 `json:"assoc_id"`
-	ToCustomer sql.NullInt64 `json:"to_cust"`
-	FromCustomer sql.NullInt64 `json:"from_cust"`
-	CompanyID int32 `json:"company_id"`
+type Ledger struct {
+	ID           int32          `json:"id"`
+	CustID       int32          `json:"cust_id"`
+	LedgerType   string         `json:"ledger_type"`
+	LedgerDate   string         `json:"ledger_date"`
+	LedgerNo     sql.NullString `json:"ledger_no"`
+	AssocID      sql.NullInt64  `json:"assoc_id"`
+	ToCustomer   sql.NullInt64  `json:"to_cust"`
+	FromCustomer sql.NullInt64  `json:"from_cust"`
+	CompanyID    int32          `json:"company_id"`
+}
+
+type Journal struct {
+	ID          int32  `json:"id"`
+	Date        string `json:"string"`
+	JournalID   int32  `json:"journal_id"`
+	Narration   string `json:"narration"`
+	RefNo       string `json:"ref_no"`
+	StatementID int32  `json:"stat_id"`
 }

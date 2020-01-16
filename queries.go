@@ -29,6 +29,12 @@ const BANK_WISE_STATEMENT = `
 		deposit, withdrawl, bank_id, company_id
 		from statement where bank_id=$1 order by date, withdrawl, deposit
 `
+const ID_WISE_STATEMENT = `
+	Select
+		id, narration, date, refno, created_at, cust_id, deposit, withdrawl,
+		bank_id, company_id
+		from statement where id=$1
+`
 const CREATE_NEW_MASTER = `
 			INSERT INTO masters(
 				cust_id,
@@ -54,5 +60,10 @@ const INSERT_LEDGER = `Insert into ledger(master_name, ledger_type,
 const GET_LEDGER = `SELECT id,cust_id, ledger_type, ledger_date, ledger_no, associated_id, 
 										to_customer, from_customer, company_id from ledger where cust_id = $1 
 										and company_id = $2`
+const GET_ACCOUNT = `SELECT a.id, a.date, b.id, b.narration, b.refno, b.sttmt_id
+					 FROM POSTING a
+					 INNER JOIN
+					 JOURNAL b on a.journalid = b.id
+					 WHERE a.masterid = $1`
 
 // const INSERT_LEDGER = `INSERT into cash_statement(cust_id, narration, date, refno, withdrawl )`
