@@ -9,6 +9,7 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
+	"github.com/terminal-ator/xltron/models"
 )
 
 type FileResponse struct {
@@ -49,7 +50,7 @@ func PostFileUpload(c *gin.Context) {
 	// save to database
 	company := c.Query("company")
 	companyID := c.Query("id")
-	var File File
+	var File models.File
 
 	// save the file as json
 	csvFileName, headers, err := CsvToMap("./uploads/" + handler.Filename)
@@ -112,7 +113,17 @@ func PostFileUploadDirect(c *gin.Context) {
 	// save to database
 	company := c.Query("company")
 	companyID := c.Query("id")
-	var File File
+	sID := c.Query("sales")
+
+	salesID, err := strconv.Atoi(sID)
+
+	if err != nil {
+		c.String(404, "Invalid request")
+		log.Printf("BAD ID")
+		return
+	}
+
+	var File models.File
 
 	// save the file as json
 	csvFileName, _, err := CsvToMap("./uploads/" + handler.Filename)
@@ -132,6 +143,7 @@ func PostFileUploadDirect(c *gin.Context) {
 
 	if err != nil {
 		c.String(http.StatusInternalServerError, err.Error())
+		log.Println("error while saving:", err.Error())
 		return
 	}
 	// marshal headers to json
@@ -143,10 +155,13 @@ func PostFileUploadDirect(c *gin.Context) {
 		"billno": "billno",
 	}
 
-	sCnt, eCnt, err := SaveCsvToDB(csvFileName, keys, company, int64(x))
+	sCnt, eCnt, err := SaveCsvToDB(csvFileName, keys, company, int32(salesID), int64(x))
 
+	log.Println(sCnt)
 	if err != nil {
+		log.Println("Error while saving", err.Error())
 		c.String(http.StatusInternalServerError, err.Error())
+		return
 	}
 	// headerString, _ := json.Marshal(&fileResponse)
 
@@ -159,33 +174,33 @@ func PostFileUploadDirect(c *gin.Context) {
 func PutCsvToDB(c *gin.Context) {
 
 	// parse the body to gain insights
-	var fileRequest FileRequest
-	err := c.BindJSON(&fileRequest)
+	// var fileRequest FileRequest
+	// err := c.BindJSON(&fileRequest)
 
-	if err != nil {
-		c.String(http.StatusBadRequest, err.Error())
-	}
+	// if err != nil {
+	// 	c.String(http.StatusBadRequest, err.Error())
+	// }
 
-	company := c.Query("company")
-	companyID, _ := strconv.Atoi(c.Query("id"))
+	// company := c.Query("company")
+	// companyID, _ := strconv.Atoi(c.Query("id"))
 
-	// parse the body to file request
+	// // parse the body to file request
 
-	// call the csvToDb and get results
-	sCnt, eCnt, err := SaveCsvToDB(fileRequest.Filename, fileRequest.Keys, company, int64(companyID))
+	// // call the csvToDb and get results
+	// sCnt, eCnt, err := SaveCsvToDB(fileRequest.Filename, fileRequest.Keys, company, int64(companyID))
 
-	if err != nil {
-		fmt.Println("Error:", err.Error())
-		c.String(http.StatusInternalServerError, err.Error())
-		return
-	}
+	// if err != nil {
+	// 	fmt.Println("Error:", err.Error())
+	// 	c.String(http.StatusInternalServerError, err.Error())
+	// 	return
+	// }
 
-	response := map[string]interface{}{
-		"success": sCnt,
-		"errors":  eCnt,
-	}
+	// response := map[string]interface{}{
+	// 	"success": sCnt,
+	// 	"errors":  eCnt,
+	// }
 
-	c.JSON(http.StatusOK, response)
+	// c.JSON(http.StatusOK, response)
 
 }
 
@@ -211,22 +226,61 @@ func PostCashToLedger(c *gin.Context) {
 
 	log.Println(Ledger)
 
-	for _, ledger := range Ledger.Ledgers {
-		_, err := DB.Exec(`Insert into ledger(cust_id,ledger_type,ledger_date,from_customer,company_id) values($1,$2,$3,$4,$5)`, ledger.CustID, "Cash", Ledger.Date, ledger.Cash, companyID)
-
-		if err != nil {
-			log.Print(err.Error())
-			c.String(http.StatusInternalServerError, err.Error())
-		}
+	// get cash ledger for the company
+	row := DB.QueryRow(`select id from account_master where groupid = 6 and companyid = $1`, companyID)
+	var cashID int32
+	err = row.Scan(&cashID)
+	ErrorHandler(err, c)
+	tx, _ := DB.Begin()
+	var j models.AJournal
+	j.Date = Ledger.Date
+	j.CompanyID = int32(companyID)
+	j.Narration = "Cash paid on" + Ledger.Date
+	j.Refno = "cash entry, no ref req"
+	j.Type = "Receipt"
+	err = j.SaveNoSttmt(tx)
+	if err != nil {
+		log.Println(err.Error())
+		c.String(500, "failed")
+		tx.Rollback()
+		return
 	}
 
+	var sumOfLedger = 0.0
+
+	for _, ledger := range Ledger.Ledgers {
+		// _, err := DB.Exec(`Insert into ledger(cust_id,ledger_type,ledger_date,from_customer,company_id) values($1,$2,$3,$4,$5)`, ledger.CustID, "Cash", Ledger.Date, ledger.Cash, companyID)
+
+		// create a posting
+		var p = &models.Posting{Amount: float64(-ledger.Cash), AssetType: "Rs.", CompanyID: int32(companyID), JournalID: j.ID, MasterID: int32(ledger.CustID)}
+
+		err := p.Save(tx)
+		if err != nil {
+			log.Print(err.Error())
+			tx.Rollback()
+			c.String(http.StatusInternalServerError, err.Error())
+			return
+		}
+		sumOfLedger += float64(ledger.Cash)
+	}
+
+	// create final post for cash
+	var p = &models.Posting{Amount: sumOfLedger, AssetType: "Rs.", CompanyID: int32(companyID), JournalID: j.ID, MasterID: cashID}
+
+	if err := p.Save(tx); err != nil {
+		log.Println(err.Error())
+		tx.Rollback()
+		c.String(500, err.Error())
+		return
+	}
+	tx.Commit()
 	c.String(http.StatusOK, "All OK")
 }
 
 func GetLedgerForCustID(c *gin.Context) {
 	cust_id := c.Query("cust_id")
 	company := c.Query("company")
-	var CustomerLedger []Ledger
+	var CustomerLedger []models.Ledger
 
 	ledgers, err := DB.Query(GET_LEDGER, cust_id, company)
 	if err != nil {
@@ -234,7 +288,7 @@ func GetLedgerForCustID(c *gin.Context) {
 		c.String(http.StatusInternalServerError, err.Error())
 	}
 	for ledgers.Next() {
-		var tempLedger Ledger
+		var tempLedger models.Ledger
 		err := ledgers.Scan(&tempLedger.ID, &tempLedger.CustID, &tempLedger.LedgerType, &tempLedger.LedgerDate, &tempLedger.LedgerNo, &tempLedger.AssocID, &tempLedger.ToCustomer, &tempLedger.FromCustomer, &tempLedger.CompanyID)
 		if err != nil {
 			log.Println("Error while scanning: ", err.Error())
@@ -244,12 +298,29 @@ func GetLedgerForCustID(c *gin.Context) {
 	c.JSON(http.StatusOK, CustomerLedger)
 }
 
+func GetPostingForID(c *gin.Context) {
+	id := c.Param("id")
+	var journals []models.Journal
+
+	rows, err := DB.Query(GET_ACCOUNT, id)
+	ErrorHandler(err, c)
+
+	for rows.Next() {
+		var temp models.Journal
+		err := rows.Scan(&temp.ID, &temp.Date, &temp.JournalID, &temp.Narration,
+			&temp.RefNo, &temp.StatementID, &temp.Amount)
+		ErrorHandler(err, c)
+		journals = append(journals, temp)
+	}
+	c.JSON(200, journals)
+}
+
 type QuickRequest struct {
 	Date   string `json:"date"`
 	ToFrom string `json:"toFrom"`
 	Type   string `json:"Type"`
 	CustID int64  `json:"cust_id"`
-	Amount int64  `json:"amount`
+	Amount int64  `json:"amount"`
 }
 
 func PutQuickToLedger(c *gin.Context) {
@@ -261,7 +332,7 @@ func PutQuickToLedger(c *gin.Context) {
 		c.String(http.StatusBadRequest, err.Error())
 	}
 	var withdrawl, deposit int64
-	log.Printf("To recived?: ", req.ToFrom)
+	log.Printf("To recived?: %s", req.ToFrom)
 	if req.ToFrom == "To" {
 		withdrawl = req.Amount
 	} else {

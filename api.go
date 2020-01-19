@@ -9,6 +9,7 @@ import (
 	"database/sql"
 
 	"github.com/gin-gonic/gin"
+	"github.com/terminal-ator/xltron/models"
 )
 
 type MasterRequest struct {
@@ -30,9 +31,9 @@ func GetAllMasters(c *gin.Context) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	masterArray := make([]Master, 0)
+	masterArray := make([]models.Master, 0)
 	for masters.Next() {
-		var master Master
+		var master models.Master
 		if err := masters.Scan(&master.ID, &master.CustID, &master.IsMaster, &master.Name, &master.Area, &master.CompanyID, &master.ChequeFlag); err != nil {
 			log.Fatal(err)
 		}
@@ -46,12 +47,12 @@ func GetAllMasters(c *gin.Context) {
 
 func GetAllAccounts(c *gin.Context) {
 	company := c.Param("company")
-	rows, err := DB.Query(`SELECT ID, Name,companyid,chq_flg from account_master where companyid=$1 order by name`, company)
+	rows, err := DB.Query(`SELECT ID, Name,companyid,chq_flg,groupID from account_master where companyid=$1 order by name`, company)
 	ErrorHandler(err, c)
-	masters := make([]Master, 0)
+	masters := make([]models.Master, 0)
 	for rows.Next() {
-		var mstr Master
-		err := rows.Scan(&mstr.CustID, &mstr.Name, &mstr.CompanyID, &mstr.ChequeFlag)
+		var mstr models.Master
+		err := rows.Scan(&mstr.CustID, &mstr.Name, &mstr.CompanyID, &mstr.ChequeFlag, &mstr.GroupID)
 		ErrorHandler(err, c)
 		masters = append(masters, mstr)
 	}
@@ -90,9 +91,9 @@ func GetAllBanks(c *gin.Context) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	bankArray := make([]Bank, 0)
+	bankArray := make([]models.Bank, 0)
 	for banks.Next() {
-		var bank Bank
+		var bank models.Bank
 		if err := banks.Scan(&bank.ID, &bank.Name); err != nil {
 			log.Fatal(err)
 		}
@@ -109,9 +110,9 @@ func GetAllCompanies(c *gin.Context) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	compArray := make([]Company, 0)
+	compArray := make([]models.Company, 0)
 	for companies.Next() {
-		var comp Company
+		var comp models.Company
 		if err := companies.Scan(&comp.ID, &comp.Name, &comp.Year); err != nil {
 			log.Fatal(err)
 		}
@@ -130,9 +131,9 @@ func GetConsolidatedStatements(c *gin.Context) {
 			log.Fatal(dbError)
 		}
 	}
-	statementArray := make([]Statement, 0)
+	statementArray := make([]models.Statement, 0)
 	for statements.Next() {
-		var stat Statement
+		var stat models.Statement
 		if err := statements.Scan(&stat.ID,
 			&stat.Narration, &stat.Date, &stat.RefNo, &stat.CreatedAt,
 			&stat.CustID, &stat.Deposit, &stat.Withdrawl, &stat.Bank.ID,
@@ -140,7 +141,7 @@ func GetConsolidatedStatements(c *gin.Context) {
 			log.Fatal(err)
 		}
 		master := DB.QueryRow("Select id, cust_id, name from masters where cust_id=$1 and company_id = $2 and isMaster=1", stat.CustID, company)
-		var nMaster Master
+		var nMaster models.Master
 		dbNError := master.Scan(&nMaster.ID, &nMaster.CustID, &nMaster.Name)
 		if dbNError != nil {
 			if dbNError != sql.ErrNoRows {
@@ -161,9 +162,9 @@ func GetConsolidatedStatements(c *gin.Context) {
 
 func GetAllGroups(c *gin.Context) {
 	db, _ := DB.Query(`SELECT id, name FROM MASTER_GROUPS`)
-	groupArray := make([]Group, 0)
+	groupArray := make([]models.Group, 0)
 	for db.Next() {
-		var grp Group
+		var grp models.Group
 		db.Scan(&grp.ID, &grp.Name)
 		fmt.Println("Printing group name in next line")
 		fmt.Println(grp.Name)
@@ -198,9 +199,9 @@ func GetCompanies(c *gin.Context) {
 		c.String(http.StatusBadRequest, err.Error())
 	}
 
-	var companies []UploadCompanies
+	var companies []models.UploadCompanies
 	for rows.Next() {
-		var temp UploadCompanies
+		var temp models.UploadCompanies
 		err := rows.Scan(&temp.ID, &temp.Name, &temp.CompanyID)
 		if err != nil {
 			log.Fatal(err)
@@ -220,10 +221,10 @@ func FetchStatements(c *gin.Context) {
 		statements, dbError = DB.Query(BANK_WISE_STATEMENT, bank_id)
 	}
 
-	stats := make([]Statement, 0)
+	stats := make([]models.Statement, 0)
 	// fmt.Println(statements)
 	for statements.Next() {
-		var stat Statement
+		var stat models.Statement
 		if err := statements.Scan(&stat.ID,
 			&stat.Narration,
 			&stat.Date,
@@ -237,9 +238,9 @@ func FetchStatements(c *gin.Context) {
 			log.Fatal(err)
 		}
 		// log.Println(stat.CustID)
-		master := DB.QueryRow(`Select id, cust_id, name from masters 
-			where cust_id=$1 and company_id=$2 and isMaster=1`, stat.CustID, stat.CompanyID)
-		var nMaster Master
+		master := DB.QueryRow(`Select id, id, name from account_master 
+			where id=$1 and companyid=$2`, stat.CustID, stat.CompanyID)
+		var nMaster models.Master
 		dbNError := master.Scan(&nMaster.ID, &nMaster.CustID, &nMaster.Name)
 		if dbNError != nil {
 			if dbNError != sql.ErrNoRows {
@@ -252,7 +253,7 @@ func FetchStatements(c *gin.Context) {
 			stat.Master = nMaster
 		}
 		bank := DB.QueryRow("Select id, name from banks where id=$1", stat.BankID)
-		var nBank Bank
+		var nBank models.Bank
 		bankError := bank.Scan(&nBank.ID, &nBank.Name)
 		if bankError != nil {
 			if bankError != sql.ErrNoRows {

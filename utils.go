@@ -63,9 +63,13 @@ func CsvToMap(filePath string) (string, []string, error) {
 
 }
 
-func ErrorHandler(err error, c *gin.Context) {
+func ErrorHandler(err error, c *gin.Context, text ...interface{}) {
+
 	if err != nil {
-		log.Println("Error occured: %s", err.Error())
+		log.Printf("\n Error occured: %s", err.Error())
+		if text != nil {
+			log.Println(text[0])
+		}
 		c.String(500, err.Error())
 	}
 }

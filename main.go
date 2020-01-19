@@ -10,22 +10,6 @@ import (
 	_ "github.com/lib/pq"
 )
 
-type Statement struct {
-	ID        int32           `json:"id"`
-	Narration string          `json:"narration"`
-	Date      string          `json:"date"`
-	RefNo     string          `json:"ref_no"`
-	CreatedAt string          `json:"created_at"`
-	CustID    sql.NullInt64   `json:"cust_id"`
-	Master    Master          `json:"master"`
-	Withdrawl sql.NullFloat64 `json:"withdrawl"`
-	Deposit   sql.NullFloat64 `json:"deposit"`
-	BankID    int32           `json:"bank_id"`
-	Bank      Bank            `json:"bank"`
-	Company   Company         `json:"company"`
-	CompanyID int64           `json:"company_id"`
-}
-
 var DB *sql.DB
 
 func main() {
@@ -63,6 +47,12 @@ func main() {
 
 	// new account logic
 	r.GET("/accounts/:company", GetAllAccounts)
+
+	// new journal logic
+	r.GET("/postings/:id", GetPostingForID)
+	r.POST("/statement/", saveStatementToCustID)
+
+	r.GET("/saveid", updateCUSTID)
 
 	r.Run() // listen and serve on 0.0.0.0:8080
 }

@@ -60,10 +60,11 @@ const INSERT_LEDGER = `Insert into ledger(master_name, ledger_type,
 const GET_LEDGER = `SELECT id,cust_id, ledger_type, ledger_date, ledger_no, associated_id, 
 										to_customer, from_customer, company_id from ledger where cust_id = $1 
 										and company_id = $2`
-const GET_ACCOUNT = `SELECT a.id, a.date, b.id, b.narration, b.refno, b.sttmt_id
+const GET_ACCOUNT = `SELECT 
+					 a.id, b.date, b.id, b.narration, b.refno, b.sttmt_id,a.amount
 					 FROM POSTING a
 					 INNER JOIN
 					 JOURNAL b on a.journalid = b.id
-					 WHERE a.masterid = $1`
+					 WHERE a.masterid = $1 order by b.date desc`
 
 // const INSERT_LEDGER = `INSERT into cash_statement(cust_id, narration, date, refno, withdrawl )`
