@@ -22,6 +22,7 @@ type CreateMasterRequest struct {
 	Name    string `json:"name"`
 	Group   int64  `json:"group"`
 	Company int64  `json:"company"`
+	Beat    int32  `json:"beatID"`
 }
 
 func GetAllMasters(c *gin.Context) {
@@ -47,12 +48,17 @@ func GetAllMasters(c *gin.Context) {
 
 func GetAllAccounts(c *gin.Context) {
 	company := c.Param("company")
-	rows, err := DB.Query(`SELECT ID, Name,companyid,chq_flg,groupID from account_master where companyid=$1 order by name`, company)
+
+	query := `SELECT A.ID,A.NAME,A.COMPANYID, A.CHQ_FLG, A.GROUPID, B.Balance from ACCOUNT_MASTER A INNER JOIN(
+			SELECT AM.ID, COALESCE(SUM(P.AMOUNT),0) AS BALANCE FROM ACCOUNT_MASTER AM LEFT OUTER JOIN POSTING P ON AM.ID = P.MASTERID
+			WHERE AM.COMPANYID = $1 GROUP BY AM.ID) B ON A.ID=B.ID ORDER BY NAME`
+
+	rows, err := DB.Query(query, company)
 	ErrorHandler(err, c)
 	masters := make([]models.Master, 0)
 	for rows.Next() {
 		var mstr models.Master
-		err := rows.Scan(&mstr.CustID, &mstr.Name, &mstr.CompanyID, &mstr.ChequeFlag, &mstr.GroupID)
+		err := rows.Scan(&mstr.CustID, &mstr.Name, &mstr.CompanyID, &mstr.ChequeFlag, &mstr.GroupID, &mstr.Balance)
 		ErrorHandler(err, c)
 		masters = append(masters, mstr)
 	}
@@ -270,4 +276,8 @@ func FetchStatements(c *gin.Context) {
 	c.JSON(200, gin.H{
 		"statements": stats,
 	})
+}
+
+func FetchBeat(c *gin.Context) {
+	cmp := c.Param("company")
 }
