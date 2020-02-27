@@ -9,3 +9,5 @@ type ChqCreateReq struct {
 	Amount   string `json:"amount"`
 	BankID   int64  `json:"bank_id"`
 }
+
+// const FetchBeats

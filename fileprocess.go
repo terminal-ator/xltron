@@ -157,8 +157,8 @@ func SaveCsvToDB(filename string, keys map[string]string, company string, saleID
 			fmt.Println("Name not found")
 			errorCount++
 			_, saveError := DB.Exec(`Insert into error_ledger(master_name, ledger_type,
-				 ledger_date, ledger_no, to_customer, company_id, interfaceCode) values($1, $2, $3, $4, $5, $6, $7)`,
-				LRow.Name, LRow.Company, LRow.DateCol, LRow.BillNo, LRow.Amount, LRow.CompanyID, company)
+				 ledger_date, ledger_no, to_customer, company_id, interfaceCode,associated_id) values($1, $2, $3, $4, $5, $6, $7,$8)`,
+				LRow.Name, LRow.Company, LRow.DateCol, LRow.BillNo, LRow.Amount, LRow.CompanyID, company, saleID)
 
 			if saveError != nil {
 				fmt.Println("IN save error")

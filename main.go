@@ -54,5 +54,7 @@ func main() {
 
 	r.GET("/saveid", updateCUSTID)
 
-	r.Run() // listen and serve on 0.0.0.0:8080
+	// error handler
+	r.GET("/errors/:company", GetErrorLedgers)
+	r.Run(":8080") // listen and serve on 0.0.0.0:8080
 }

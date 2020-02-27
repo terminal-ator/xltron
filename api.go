@@ -155,7 +155,6 @@ func GetConsolidatedStatements(c *gin.Context) {
 			}
 		}
 		if dbNError == nil {
-
 			master.Scan()
 			stat.Master = nMaster
 		}
@@ -194,6 +193,15 @@ func CreateMaster(c *gin.Context) {
 	c.JSON(200, gin.H{
 		"message": "Successful Master creation",
 	})
+}
+
+func CreateMasterC(c *gin.Context) {
+	var req CreateMasterRequest
+	err := c.BindJSON(&req)
+	if err != nil {
+		log.Println(err)
+	}
+
 }
 
 func GetCompanies(c *gin.Context) {
@@ -278,6 +286,6 @@ func FetchStatements(c *gin.Context) {
 	})
 }
 
-func FetchBeat(c *gin.Context) {
-	cmp := c.Param("company")
-}
+// func FetchBeat(c *gin.Context) {
+// cmp := c.Param("company")
+// }

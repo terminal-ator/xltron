@@ -347,3 +347,106 @@ func PutQuickToLedger(c *gin.Context) {
 		c.String(http.StatusOK, "Passed")
 	}
 }
+
+type ErrorLedger struct {
+	ID            int32   `json:"id"`
+	Name          string  `json:"name"`
+	Type          string  `json:"type"`
+	Date          string  `json:"date"`
+	LedgerNo      string  `json:"ledger_no"`
+	AssocID       int64   `json:"assoc_id"`
+	Amount        float64 `json:"amount"`
+	CompanyID     int32  `json:"company_id"`
+	InterfaceCode string  `json:"i_code"`
+}
+
+func GetErrorLedgers(c *gin.Context) {
+
+	company := c.Param("company")
+	var errorLedgers []ErrorLedger
+
+	rows, err := DB.Query(`Select id, master_name, ledger_type, 
+		ledger_date, ledger_no, associated_id, to_customer, company_id, interfaceCode
+		FROM error_ledger where company_id = $1`, company)
+
+	if err != nil {
+		c.String(500, "Failed while executing command")
+		return
+	}
+
+	// make array of errors
+	for rows.Next() {
+		var temp ErrorLedger
+		rErr := rows.Scan(&temp.ID, &temp.Name, &temp.Type, &temp.Date,
+			&temp.LedgerNo, &temp.AssocID, &temp.Amount, &temp.CompanyID, &temp.InterfaceCode)
+		if rErr != nil {
+			log.Println(rErr.Error())
+			c.String(500, "Failed to find result")
+			return
+		}
+		errorLedgers = append(errorLedgers, temp)
+	}
+
+	c.JSON(200, errorLedgers)
+}
+
+type MergeErrorReq struct{
+	CustID int64 `json:"cust_id"`
+	ErrorID int64 `json:"error_id"` 
+}
+
+func MergeErrors(c *gin.Context){
+
+	// bind the req
+	var req MergeErrorReq
+	c.BindJSON(&req)
+
+	// fetch error ledger for id
+	var ledger ErrorLedger
+
+	row := DB.QueryRow(`Select master_name, interfacecode,
+	associated_id, to_customer, ledger_no,company_id,ledger_date
+	FROM error_ledger where id=$1`,req.ErrorID)
+
+	err:= row.Scan(&ledger.Name, &ledger.InterfaceCode, &ledger.AssocID, &ledger.Amount, &ledger.LedgerNo,
+					  &ledger.CompanyID, &ledger.Date)
+	if err!=nil{
+		c.String(500, err.Error())
+		log.Println(err.Error())
+	}
+
+	// add to accounts
+	trx, err := DB.Begin()
+
+	if err!= nil{
+		c.String(500, err.Error())
+		log.Println(err.Error())
+	}
+
+	// create a account
+	_, err = trx.Exec(`Insert into Accounts(name, interfacecode, masterid) values($1,$2,$3)`)
+
+	if err!=nil{
+		c.String(500, err.Error())
+		log.Println(err.Error())
+	}
+
+	// make journal for the error entry
+	journal := &models.AJournal{
+		CompanyID: ledger.CompanyID,
+		Date: ledger.Date,
+		Narration: "Bill No.",
+		Refno: ledger.LedgerNo,
+		StatementID: 99999999,
+		Type: "Bill",
+	}
+	
+	err = journal.Save(trx)
+	
+	if err!=nil{
+
+	}
+
+
+
+}
