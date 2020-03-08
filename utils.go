@@ -68,7 +68,7 @@ func ErrorHandler(err error, c *gin.Context, text ...interface{}) {
 	if err != nil {
 		log.Printf("\n Error occured: %s", err.Error())
 		if text != nil {
-			log.Println(text[0])
+			log.Println(text)
 		}
 		c.String(500, err.Error())
 	}

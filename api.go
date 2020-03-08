@@ -49,7 +49,7 @@ func GetAllMasters(c *gin.Context) {
 func GetAllAccounts(c *gin.Context) {
 	company := c.Param("company")
 
-	query := `SELECT A.ID,A.NAME,A.COMPANYID, A.CHQ_FLG, A.GROUPID, B.Balance from ACCOUNT_MASTER A INNER JOIN(
+	query := `SELECT A.ID,A.NAME,A.COMPANYID, A.CHQ_FLG, A.GROUPID, A.beatid, B.Balance from ACCOUNT_MASTER A INNER JOIN(
 			SELECT AM.ID, COALESCE(SUM(P.AMOUNT),0) AS BALANCE FROM ACCOUNT_MASTER AM LEFT OUTER JOIN POSTING P ON AM.ID = P.MASTERID
 			WHERE AM.COMPANYID = $1 GROUP BY AM.ID) B ON A.ID=B.ID ORDER BY NAME`
 
@@ -58,7 +58,7 @@ func GetAllAccounts(c *gin.Context) {
 	masters := make([]models.Master, 0)
 	for rows.Next() {
 		var mstr models.Master
-		err := rows.Scan(&mstr.CustID, &mstr.Name, &mstr.CompanyID, &mstr.ChequeFlag, &mstr.GroupID, &mstr.Balance)
+		err := rows.Scan(&mstr.CustID, &mstr.Name, &mstr.CompanyID, &mstr.ChequeFlag, &mstr.GroupID, &mstr.BeatID, &mstr.Balance)
 		ErrorHandler(err, c)
 		masters = append(masters, mstr)
 	}

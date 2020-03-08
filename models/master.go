@@ -15,4 +15,5 @@ type Master struct {
 	ChequeFlag int32          `json:"chq_flg"`
 	GroupID    int32          `json:"group_id"`
 	Balance    float64        `json:"balance"`
+	BeatID     int64          `json:"beat_id"`
 }

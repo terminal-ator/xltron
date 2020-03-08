@@ -1,6 +1,7 @@
 package main
 
 import (
+	"database/sql"
 	"fmt"
 	"io"
 	"log"
@@ -356,7 +357,7 @@ type ErrorLedger struct {
 	LedgerNo      string  `json:"ledger_no"`
 	AssocID       int64   `json:"assoc_id"`
 	Amount        float64 `json:"amount"`
-	CompanyID     int32  `json:"company_id"`
+	CompanyID     int32   `json:"company_id"`
 	InterfaceCode string  `json:"i_code"`
 }
 
@@ -390,12 +391,19 @@ func GetErrorLedgers(c *gin.Context) {
 	c.JSON(200, errorLedgers)
 }
 
-type MergeErrorReq struct{
-	CustID int64 `json:"cust_id"`
-	ErrorID int64 `json:"error_id"` 
+//
+//  Merge Error Ledger with a current user
+//
+type MergeErrorReq struct {
+	CustID  int64 `json:"cust_id"`
+	ErrorID int64 `json:"error_id"`
 }
 
-func MergeErrors(c *gin.Context){
+func MoveErrorToJournal(trx *sql.Tx, ledger ErrorLedger, req MergeErrorReq) {
+
+}
+
+func MergeErrors(c *gin.Context) {
 
 	// bind the req
 	var req MergeErrorReq
@@ -406,11 +414,11 @@ func MergeErrors(c *gin.Context){
 
 	row := DB.QueryRow(`Select master_name, interfacecode,
 	associated_id, to_customer, ledger_no,company_id,ledger_date
-	FROM error_ledger where id=$1`,req.ErrorID)
+	FROM error_ledger where id=$1`, req.ErrorID)
 
-	err:= row.Scan(&ledger.Name, &ledger.InterfaceCode, &ledger.AssocID, &ledger.Amount, &ledger.LedgerNo,
-					  &ledger.CompanyID, &ledger.Date)
-	if err!=nil{
+	err := row.Scan(&ledger.Name, &ledger.InterfaceCode, &ledger.AssocID, &ledger.Amount, &ledger.LedgerNo,
+		&ledger.CompanyID, &ledger.Date)
+	if err != nil {
 		c.String(500, err.Error())
 		log.Println(err.Error())
 	}
@@ -418,35 +426,81 @@ func MergeErrors(c *gin.Context){
 	// add to accounts
 	trx, err := DB.Begin()
 
-	if err!= nil{
+	if err != nil {
 		c.String(500, err.Error())
 		log.Println(err.Error())
 	}
 
 	// create a account
-	_, err = trx.Exec(`Insert into Accounts(name, interfacecode, masterid) values($1,$2,$3)`)
+	_, err = trx.Exec(`Insert into Accounts(name, interfacecode, masterid) values($1,$2,$3)`,
+		ledger.Name, ledger.InterfaceCode, req.CustID)
 
-	if err!=nil{
+	if err != nil {
 		c.String(500, err.Error())
+		log.Println("Failed to create account")
 		log.Println(err.Error())
 	}
 
 	// make journal for the error entry
 	journal := &models.AJournal{
 		CompanyID: ledger.CompanyID,
-		Date: ledger.Date,
+		Date:      ledger.Date,
 		Narration: "Bill No.",
-		Refno: ledger.LedgerNo,
-		StatementID: 99999999,
-		Type: "Bill",
-	}
-	
-	err = journal.Save(trx)
-	
-	if err!=nil{
-
+		Refno:     ledger.LedgerNo,
+		Type:      "Bill",
 	}
 
+	err = journal.SaveNoSttmt(trx)
 
+	if err != nil {
+		c.String(500, err.Error())
+		log.Println(err.Error())
+	}
 
+	// create posting for sales
+	posting1 := &models.Posting{
+		Amount:    -ledger.Amount,
+		AssetType: "Rs.",
+		CompanyID: ledger.CompanyID,
+		JournalID: journal.ID,
+		MasterID:  int32(ledger.AssocID),
+	}
+
+	err = posting1.Save(trx)
+	if err != nil {
+		c.String(500, err.Error())
+		log.Println(err.Error())
+		trx.Rollback()
+		return
+	}
+
+	posting2 := &models.Posting{
+		Amount:    ledger.Amount,
+		AssetType: "Rs.",
+		CompanyID: ledger.CompanyID,
+		JournalID: journal.ID,
+		MasterID:  int32(req.CustID),
+	}
+
+	err = posting2.Save(trx)
+	if err != nil {
+		c.String(500, err.Error())
+		log.Println(err.Error())
+		trx.Rollback()
+		return
+	}
+
+	// remove from error ledgers
+	_, err = trx.Exec(`Delete from error_ledger where id = $1`, req.ErrorID)
+
+	if err != nil {
+		c.String(500, err.Error())
+		log.Println(err.Error())
+		trx.Rollback()
+		return
+	}
+
+	trx.Commit()
+	// return 200
+	c.String(200, "Completed")
 }

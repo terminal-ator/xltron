@@ -54,7 +54,13 @@ func main() {
 
 	r.GET("/saveid", updateCUSTID)
 
+	// masters
+	r.POST("/master/:company", PostCreateMaster)
+
+	r.GET("/beat/:company", FetchBeats)
+
 	// error handler
 	r.GET("/errors/:company", GetErrorLedgers)
+	r.POST("/errors", MergeErrors)
 	r.Run(":8080") // listen and serve on 0.0.0.0:8080
 }
