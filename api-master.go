@@ -1,7 +1,10 @@
 package main
 
 import (
+	"fmt"
+	"github.com/terminal-ator/xltron/models"
 	"log"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 )
@@ -61,4 +64,79 @@ func PostCreateMaster(c *gin.Context) {
 	// commit
 	trx.Commit()
 	c.JSON(200, gin.H{"cust_id": rowID})
+}
+
+func UpdateMaster(c *gin.Context) {
+
+	var Master models.Master
+	err := c.BindJSON(&Master)
+
+	if err != nil {
+		ErrorHandler(err, c, "Body to json error")
+		return
+	}
+
+	var oldMaster models.Master
+
+	row := DB.QueryRow(`SELECT id, name, beatid, groupid, companyid from account_master where id=$1`, Master.CustID.Int64)
+
+	err = row.Scan(&oldMaster.CustID, &oldMaster.Name, &oldMaster.BeatID, &oldMaster.GroupID, &oldMaster.CompanyID)
+
+	if err != nil {
+		ErrorHandler(err, c, "Scanning Master")
+		return
+	}
+	var param []interface{}
+	paramCount := 1
+	var params []string
+	updateQuery := `UPDATE account_master set `
+
+	if oldMaster.BeatID != Master.BeatID {
+		tmpString := fmt.Sprintf("beatid = $%d", paramCount)
+		params = append(params, tmpString)
+		param = append(param, Master.BeatID)
+		paramCount += 1
+	}
+
+	if oldMaster.GroupID != Master.GroupID {
+		tmpString := fmt.Sprintf("groupid = $%d", paramCount)
+		params = append(params, tmpString)
+		param = append(param, Master.GroupID)
+		paramCount += 1
+	}
+
+	if oldMaster.Name != Master.Name {
+		tmpString := fmt.Sprintf("name=$%d", paramCount)
+		params = append(params, tmpString)
+		param = append(param, Master.Name)
+		paramCount += 1
+	}
+
+	paramQuery := strings.Join(params, ",")
+	updateQuery += paramQuery
+	updateQuery += fmt.Sprintf(" WHERE ID = $%d", paramCount)
+	param = append(param, oldMaster.CustID.Int64)
+
+	log.Println(updateQuery)
+
+	// run the update
+	if len(param) > 0 {
+		_, err = DB.Exec(updateQuery, param...)
+		if err != nil {
+			ErrorHandler(err, c, "While executing update")
+			return
+		}
+	} else {
+		c.String(400, "No parameters to update")
+	}
+
+	mstr, err := models.GetMaster(DB, Master.CustID.Int64)
+
+	if err != nil {
+		ErrorHandler(err, c, "While fetching error")
+		return
+	}
+
+	c.JSON(200, mstr)
+
 }

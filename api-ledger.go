@@ -317,11 +317,11 @@ func GetPostingForID(c *gin.Context) {
 }
 
 type QuickRequest struct {
-	Date   string `json:"date"`
-	ToFrom string `json:"toFrom"`
-	Type   string `json:"Type"`
-	CustID int64  `json:"cust_id"`
-	Amount int64  `json:"amount"`
+	Date   string  `json:"date"`
+	ToFrom string  `json:"toFrom"`
+	Type   string  `json:"Type"`
+	CustID int32   `json:"cust_id"`
+	Amount float64 `json:"amount"`
 }
 
 func PutQuickToLedger(c *gin.Context) {
@@ -332,7 +332,7 @@ func PutQuickToLedger(c *gin.Context) {
 		log.Print("Error while processing: ", err.Error())
 		c.String(http.StatusBadRequest, err.Error())
 	}
-	var withdrawl, deposit int64
+	var withdrawl, deposit float64
 	log.Printf("To recived?: %s", req.ToFrom)
 	if req.ToFrom == "To" {
 		withdrawl = req.Amount
@@ -347,6 +347,98 @@ func PutQuickToLedger(c *gin.Context) {
 	} else {
 		c.String(http.StatusOK, "Passed")
 	}
+}
+
+func QuickLedger(c *gin.Context) {
+	company := c.Param("company")
+	var req QuickRequest
+	err := c.BindJSON(&req)
+	if err != nil {
+		ErrorHandler(err, c, "While parsing json")
+		return
+	}
+	var amount float64
+	if req.ToFrom == "To" {
+		amount = req.Amount
+	} else {
+		amount = -req.Amount
+	}
+	companyID, err := strconv.Atoi(company)
+	cID := int32(companyID)
+	if err != nil {
+		ErrorHandler(err, c, "While processing company id")
+		return
+	}
+	row := DB.QueryRow(`select id from account_master where groupid = 6 and companyid = $1`, companyID)
+	var cashID int32
+	err = row.Scan(&cashID)
+
+	if err != nil {
+		ErrorHandler(err, c, "While finding the cash id")
+		return
+	}
+	// create journal
+	jrnl := &models.AJournal{
+		Date:      req.Date,
+		Narration: "Quick Add",
+		Refno:     req.Type,
+		CompanyID: cID,
+		Type:      req.ToFrom,
+	}
+
+	tx, err := DB.Begin()
+
+	if err != nil {
+		ErrorHandler(err, c, "While creating transaction")
+		return
+	}
+
+	terr := jrnl.SaveNoSttmt(tx)
+	if terr != nil {
+		ErrorHandler(terr, c, "While saving journal")
+		tx.Rollback()
+		return
+	}
+
+	// create postings
+	posting1 := &models.Posting{
+		MasterID:  req.CustID,
+		JournalID: jrnl.ID,
+		AssetType: "Rs.",
+		Amount:    amount,
+		CompanyID: cID,
+	}
+
+	perr := posting1.Save(tx)
+
+	if perr != nil {
+		ErrorHandler(perr, c, "Saving posting 1")
+		tx.Rollback()
+		return
+	}
+
+	posting2 := &models.Posting{
+		MasterID:  cashID,
+		JournalID: jrnl.ID,
+		AssetType: "Rs.",
+		Amount:    -amount,
+		CompanyID: cID,
+	}
+
+	perr = posting2.Save(tx)
+
+	log.Println("Saved the postings.")
+
+	if perr != nil {
+		ErrorHandler(perr, c, "Saving posting2")
+		tx.Rollback()
+		return
+	}
+
+	//commit
+	tx.Commit()
+
+	c.String(200, "Saved Successfully")
 }
 
 type ErrorLedger struct {
@@ -503,4 +595,28 @@ func MergeErrors(c *gin.Context) {
 	trx.Commit()
 	// return 200
 	c.String(200, "Completed")
+}
+
+func GetJournal(c *gin.Context) {
+
+	jid := c.Param("id")
+
+	// convert jid to number
+	jourID, err := strconv.Atoi(jid)
+
+	journalID := int32(jourID)
+
+	if err != nil {
+		ErrorHandler(err, c, "Invalid Key")
+		return
+	}
+	tx, _ := DB.Begin()
+
+	journals, err := models.FetchJournal(tx, journalID)
+
+	if err != nil {
+		ErrorHandler(err, c, "Errors fetching journals")
+		return
+	}
+	c.JSON(200, journals)
 }

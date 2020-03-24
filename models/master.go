@@ -1,6 +1,9 @@
 package models
 
-import "database/sql"
+import (
+	"database/sql"
+	"log"
+)
 
 // Master Structure for master
 type Master struct {
@@ -16,4 +19,21 @@ type Master struct {
 	GroupID    int32          `json:"group_id"`
 	Balance    float64        `json:"balance"`
 	BeatID     int64          `json:"beat_id"`
+}
+
+func GetMaster(db *sql.DB, Id int64) (Master, error) {
+
+	var master Master
+
+	row := db.QueryRow(`SELECT id, name, beatid, groupid, companyid FROM account_master where id=$1`, Id)
+
+	err := row.Scan(&master.CustID, &master.Name, &master.BeatID, &master.GroupID, &master.CompanyID)
+
+	if err != nil {
+		log.Println(err.Error())
+		return master, err
+	}
+
+	return master, nil
+
 }

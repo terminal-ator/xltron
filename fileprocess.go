@@ -50,7 +50,7 @@ func SaveToJournal(row LedgerRow, custID int32, saleID int32) error {
 	// create a journal entry
 	journal.CompanyID = int32(row.CompanyID)
 	journal.Date = row.DateCol
-	journal.Narration = "BILL: " + row.Company
+	journal.Narration = "Bill for " + row.Name + " for " + row.Company
 	journal.Refno = row.BillNo
 
 	err := journal.SaveNoSttmt(tx)

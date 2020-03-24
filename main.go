@@ -42,7 +42,7 @@ func main() {
 	r.GET("/uplcompany/:company", GetCompanies)
 	r.POST("/ledger/:company", PostCashToLedger)
 	r.GET("/ledger", GetLedgerForCustID)
-	r.PUT("/ledger/:company", PutQuickToLedger)
+	r.PUT("/ledger/:company", QuickLedger)
 	r.GET("/istats/:id", GetStatementById)
 
 	// new account logic
@@ -51,11 +51,14 @@ func main() {
 	// new journal logic
 	r.GET("/postings/:id", GetPostingForID)
 	r.POST("/statement/", saveStatementToCustID)
+	r.GET("/journal/:id", GetJournal)
+	r.POST("/journal", MakeJournal)
 
 	r.GET("/saveid", updateCUSTID)
 
 	// masters
 	r.POST("/master/:company", PostCreateMaster)
+	r.PUT("/master", UpdateMaster)
 
 	r.GET("/beat/:company", FetchBeats)
 
