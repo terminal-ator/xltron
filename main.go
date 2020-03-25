@@ -51,6 +51,8 @@ func main() {
 	// new journal logic
 	r.GET("/postings/:id", GetPostingForID)
 	r.POST("/statement/", saveStatementToCustID)
+	r.POST("/statement/import", PostStatementUpload)
+	r.GET("/statement/template", GetStatementTemplate)
 	r.GET("/journal/:id", GetJournal)
 	r.POST("/journal", MakeJournal)
 
