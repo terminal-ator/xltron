@@ -1,6 +1,8 @@
 package main
 
 import (
+	"database/sql"
+	"encoding/json"
 	"log"
 	"strconv"
 
@@ -217,4 +219,60 @@ func updateCUSTID(c *gin.Context) {
 	// }
 
 	c.String(200, "This api has been removed")
+}
+
+type NFloat64 sql.NullFloat64
+
+func (f NFloat64) MarshalJSON() ([]byte, error) {
+	if f.Valid {
+		return json.Marshal(f.Float64)
+	}
+	return nil, nil
+}
+
+type ReadStatement struct {
+	ID        string          `json:"id"`
+	Date      string          `json:"date"`
+	Narration string          `json:"narration"`
+	Refno     string          `json:"refno"`
+	Deposit   sql.NullFloat64 `json:"deposit"'`
+	Withdrawl sql.NullFloat64 `json:"withdrawl"`
+	CustID    int32           `json:"cust_id"`
+	Name      string          `json:"name"`
+}
+
+func DownloadStatement(c *gin.Context) {
+
+	bankID := c.Param("bank")
+	startDate := c.Query("sd")
+	endDate := c.Query("ed")
+
+	query := `select s.id,s.date, s.narration, s.refno, s.deposit,
+       s.withdrawl, am.id as cust_id, name
+        from statement s inner join account_master am on s.cust_id = am.id where s.bank_id = $1`
+	var rows *sql.Rows
+	var err error
+	if endDate == "" || startDate == "" {
+		rows, err = DB.Query(query, bankID)
+	} else {
+		query = query + ` and date>=$2 and date<=$3`
+		rows, err = DB.Query(query, bankID, startDate, endDate)
+	}
+	if err != nil {
+		ErrorHandler(err, c, "Failed fetching statements to download")
+		return
+	}
+	var statements []ReadStatement
+	for rows.Next() {
+		var statement ReadStatement
+		rerr := rows.Scan(&statement.ID, &statement.Date, &statement.Narration, &statement.Refno, &statement.Deposit,
+			&statement.Withdrawl, &statement.CustID, &statement.Name)
+		if rerr != nil {
+			ErrorHandler(rerr, c, "Failed reading statements")
+			return
+		}
+		statements = append(statements, statement)
+	}
+
+	c.JSON(200, statements)
 }

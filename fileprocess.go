@@ -11,6 +11,7 @@ import (
 
 	"github.com/terminal-ator/xltron/models"
 )
+import "github.com/kierdavis/dateparser"
 
 type ExcelRow struct {
 	Date      string `xlsx:"column(date)"`
@@ -141,7 +142,15 @@ func SaveCsvToDB(filename string, keys map[string]string, company string, saleID
 		var LRow LedgerRow
 		LRow.Name = strings.ToUpper(nameArray[index])
 		LRow.Amount, _ = strconv.ParseFloat(amountArray[index], 32)
-		LRow.DateCol = dateArray[index]
+
+		// parse date
+		parser := dateparser.Parser{DayFirst: true, Fuzzy: true}
+		t, derr := parser.Parse(dateArray[index])
+		if derr != nil {
+			log.Println("Error while parsing date")
+			return 0, 0, derr
+		}
+		LRow.DateCol = t.Format("2006-01-02")
 		LRow.BillNo = billNoArray[index]
 		LRow.Company = company
 		LRow.CompanyID = companyID

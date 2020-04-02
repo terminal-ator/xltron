@@ -1,4 +1,5 @@
 
-xltron
+./xltron
 json/*
 winehq.key
+uploads/*

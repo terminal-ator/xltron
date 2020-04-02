@@ -47,13 +47,29 @@ func GetAllMasters(c *gin.Context) {
 }
 
 func GetAllAccounts(c *gin.Context) {
-	company := c.Param("company")
+	company := c.MustGet("company")
+	yearID := c.MustGet("yearID")
+	//log.Print(comp)
+	//company := c.Param("company")
 
-	query := `SELECT A.ID,A.NAME,A.COMPANYID, A.CHQ_FLG, A.GROUPID, A.beatid, B.Balance from ACCOUNT_MASTER A INNER JOIN(
-			SELECT AM.ID, COALESCE(SUM(P.AMOUNT),0) AS BALANCE FROM ACCOUNT_MASTER AM LEFT OUTER JOIN POSTING P ON AM.ID = P.MASTERID
-			WHERE AM.COMPANYID = $1 GROUP BY AM.ID) B ON A.ID=B.ID ORDER BY NAME`
+	//query := `SELECT A.ID,A.NAME,A.COMPANYID, A.CHQ_FLG, A.GROUPID, A.beatid, B.Balance from ACCOUNT_MASTER A INNER JOIN(
+	//		SELECT AM.ID, COALESCE(SUM(P.AMOUNT),0) AS BALANCE FROM ACCOUNT_MASTER AM LEFT OUTER JOIN POSTING P ON AM.ID = P.MASTERID
+	//		WHERE AM.COMPANYID = $1 GROUP BY AM.ID) B ON A.ID=B.ID ORDER BY NAME`
 
-	rows, err := DB.Query(query, company)
+	query := `select 
+       			account_master.id, account_master.name, account_master.companyid ,account_master.chq_flg, account_master.groupid , account_master.beatid, coalesce(sum(p.amount),0) 
+					from account_master 
+					    left outer join 
+					    (select * from posting where id in (
+							select p.id from journal inner join posting p on journal.id = p.journalid
+							where date>=(select startDate from company_years where id = $1) and date <= (select endDate from company_years where id = $1))) p
+    					on account_master.id = p.masterid
+    					where companyid = $2
+						group by 
+						    account_master.id, account_master.name,account_master.chq_flg, account_master.beatid, account_master.groupid 
+						order by account_master.name`
+
+	rows, err := DB.Query(query, yearID ,company)
 	ErrorHandler(err, c)
 	masters := make([]models.Master, 0)
 	for rows.Next() {
@@ -227,12 +243,19 @@ func GetCompanies(c *gin.Context) {
 
 func FetchStatements(c *gin.Context) {
 	bank_id := c.Param("bank")
+	yearID := c.MustGet("yearID")
 	var statements *sql.Rows
 	var dbError error
 	if bank_id == "all" {
 		statements, dbError = DB.Query(ALL_STATEMENT)
 	} else {
-		statements, dbError = DB.Query(BANK_WISE_STATEMENT, bank_id)
+		statements, dbError = DB.Query(`Select 
+		id, narration, date, refno, created_at,  cust_id,
+		deposit, withdrawl, bank_id, company_id
+		from statement where bank_id=$1 
+		and date >= (select startdate from company_years where id = $2)
+		and date<=(select enddate from company_years where id = $2)
+		order by date, withdrawl, deposit`, bank_id, yearID)
 	}
 
 	stats := make([]models.Statement, 0)

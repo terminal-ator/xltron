@@ -65,6 +65,8 @@ const GET_ACCOUNT = `SELECT
 					 FROM POSTING a
 					 INNER JOIN
 					 JOURNAL b on a.journalid = b.id
-					 WHERE a.masterid = $1 order by b.date desc`
+					 WHERE a.masterid = $1
+					 AND b.date >= (sele 
+					 order by b.date desc`
 
 // const INSERT_LEDGER = `INSERT into cash_statement(cust_id, narration, date, refno, withdrawl )`

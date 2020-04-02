@@ -56,7 +56,7 @@ func PostStatementUpload(c *gin.Context) {
 
 }
 
-func GetStatementTemplate(c *gin.Context){
+func GetStatementTemplate(c *gin.Context) {
 	filepath := "./files/template_statement.xlsx"
 	c.Header("Content-Description", "File Transfer")
 	c.Header("Content-Transfer-Enconding", "binary")

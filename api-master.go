@@ -69,10 +69,58 @@ func PostCreateMaster(c *gin.Context) {
 func UpdateMaster(c *gin.Context) {
 
 	var Master models.Master
+	//x, _ := c.GetRawData()
+	//log.Println("Outputting body of request: ", x)
 	err := c.BindJSON(&Master)
-
 	if err != nil {
 		ErrorHandler(err, c, "Body to json error")
+		return
+	}
+
+	if Master.CustID.Int64 == 0 {
+		company := c.Param("company")
+		var req = Master
+		if err != nil {
+			log.Println(err.Error())
+			c.String(403, "Invalid request")
+			return
+		}
+
+		trx, err := DB.Begin()
+
+		if err != nil {
+			log.Println(err.Error())
+			c.String(500, "Internal server error")
+			return
+		}
+
+		row := trx.QueryRow(`INSERT INTO ACCOUNT_MASTER(name, cust_id, beatid, groupid, companyid, isactive)
+						values($1,$2,$3,$4,$5,$6) returning id`, req.Name, 99999, req.BeatID, req.GroupID, company, true)
+
+		var rowID int64
+		err = row.Scan(&rowID)
+
+		if err != nil {
+			ErrorHandler(err, c, "Error")
+			trx.Rollback()
+			return
+		}
+
+		// create a account entry
+
+		_, err = trx.Exec(`INSERT INTO ACCOUNTS(name, ismaster, interfacecode, masterid) values($1,1,$2,$3)`,
+			req.Name, req.InterfaceCode, rowID)
+
+		if err != nil {
+			ErrorHandler(err, c, "Error while creating account")
+			trx.Rollback()
+			return
+		}
+
+		// commit
+		trx.Commit()
+		c.JSON(200, gin.H{"cust_id": rowID})
+
 		return
 	}
 

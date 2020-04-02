@@ -301,9 +301,18 @@ func GetLedgerForCustID(c *gin.Context) {
 
 func GetPostingForID(c *gin.Context) {
 	id := c.Param("id")
+	yearID := c.MustGet("yearID")
 	var journals []models.Journal
 
-	rows, err := DB.Query(GET_ACCOUNT, id)
+	rows, err := DB.Query(`SELECT 
+					 a.id, b.date, b.id, b.narration, b.refno, b.sttmt_id,a.amount
+					 FROM POSTING a
+					 INNER JOIN
+					 JOURNAL b on a.journalid = b.id
+					 WHERE a.masterid = $1
+					 AND b.date >= (select startdate from company_years where id = $2)
+					 AND b.date <= (select enddate from company_years where id = $2 )
+					 order by b.date desc`, id, yearID)
 	ErrorHandler(err, c)
 
 	for rows.Next() {
@@ -537,7 +546,7 @@ func MergeErrors(c *gin.Context) {
 	journal := &models.AJournal{
 		CompanyID: ledger.CompanyID,
 		Date:      ledger.Date,
-		Narration: "Bill No.",
+		Narration: "Bill of " + ledger.Name,
 		Refno:     ledger.LedgerNo,
 		Type:      "Bill",
 	}

@@ -3,6 +3,7 @@ package main
 import (
 	"database/sql"
 	"log"
+	"time"
 
 	"github.com/gin-contrib/cors"
 
@@ -11,6 +12,20 @@ import (
 )
 
 var DB *sql.DB
+
+func companyExtractor() gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+		t := time.Now()
+		company := ctx.GetHeader("Authorization")
+		ctx.Set("company", company)
+		yearID := ctx.GetHeader("yearID")
+		ctx.Set("yearID", yearID)
+		log.Printf("Got the company: %s", company)
+		ctx.Next()
+		latency := time.Since(t)
+		log.Printf("Latency for request : %d ", latency)
+	}
+}
 
 func main() {
 	connStr := "user=postgres password=colgate dbname=postgres sslmode=disable"
@@ -22,7 +37,11 @@ func main() {
 	}
 
 	r := gin.Default()
-	r.Use(cors.Default())
+	config := cors.DefaultConfig()
+	config.AllowAllOrigins = true
+	config.AllowHeaders = append(config.AllowHeaders, "Authorization", "yearid")
+	r.Use(cors.New(config))
+	r.Use(companyExtractor())
 	r.GET("/ping", func(c *gin.Context) {
 		c.JSON(200, gin.H{
 			"message": "pong",
@@ -46,10 +65,11 @@ func main() {
 	r.GET("/istats/:id", GetStatementById)
 
 	// new account logic
-	r.GET("/accounts/:company", GetAllAccounts)
+	r.GET("/accounts", GetAllAccounts)
 
 	// new journal logic
 	r.GET("/postings/:id", GetPostingForID)
+	r.GET("/statement/download/:bank", DownloadStatement)
 	r.POST("/statement/", saveStatementToCustID)
 	r.POST("/statement/import", PostStatementUpload)
 	r.GET("/statement/template", GetStatementTemplate)
@@ -60,9 +80,10 @@ func main() {
 
 	// masters
 	r.POST("/master/:company", PostCreateMaster)
-	r.PUT("/master", UpdateMaster)
+	r.PUT("/master/:company", UpdateMaster)
 
 	r.GET("/beat/:company", FetchBeats)
+	r.GET("/years", GetCompanyYears)
 
 	// error handler
 	r.GET("/errors/:company", GetErrorLedgers)
