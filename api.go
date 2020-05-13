@@ -69,7 +69,7 @@ func GetAllAccounts(c *gin.Context) {
 						    account_master.id, account_master.name,account_master.chq_flg, account_master.beatid, account_master.groupid 
 						order by account_master.name`
 
-	rows, err := DB.Query(query, yearID ,company)
+	rows, err := DB.Query(query, yearID, company)
 	ErrorHandler(err, c)
 	masters := make([]models.Master, 0)
 	for rows.Next() {

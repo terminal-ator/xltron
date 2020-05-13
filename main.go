@@ -67,6 +67,16 @@ func main() {
 	// new account logic
 	r.GET("/accounts", GetAllAccounts)
 
+	cheque := r.Group("/cheque")
+	{
+		cheque.POST("/", AddCheque)
+		cheque.POST("/list", AddCheques)
+		cheque.GET("/cheques/:masterid", GetCheques)
+		cheque.POST("/toggle/:cid", TogglePassed)
+		cheque.GET("/recommended/:amount", GetRecommended)
+		cheque.GET("/pending", GetAllPendingCheques)
+	}
+
 	// new journal logic
 	r.GET("/postings/:id", GetPostingForID)
 	r.GET("/statement/download/:bank", DownloadStatement)
@@ -74,6 +84,7 @@ func main() {
 	r.POST("/statement/import", PostStatementUpload)
 	r.GET("/statement/template", GetStatementTemplate)
 	r.GET("/journal/:id", GetJournal)
+	r.GET("/journals", GetDayBook)
 	r.POST("/journal", MakeJournal)
 
 	r.GET("/saveid", updateCUSTID)

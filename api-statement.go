@@ -75,10 +75,15 @@ func saveStatementToCustID(c *gin.Context) {
 		// create new journal
 		var journal models.AJournal
 
+		voucherType := "Receipt"
+		if statement.Withdrawl.Valid {
+			voucherType = "Payment"
+		}
+
 		journal.Date = statement.Date
 		journal.Narration = statement.Narration
 		journal.Refno = statement.RefNo
-		journal.Type = "TEST"
+		journal.Type = voucherType
 		journal.CompanyID = req.CompanyID
 		journal.StatementID = statement.ID
 
@@ -185,6 +190,13 @@ func saveStatementToCustID(c *gin.Context) {
 	}
 	tx.Commit()
 
+	// update pending cheques
+	log.Printf("\n Updating cheques for amount %f for account %d ", statement.Deposit.Float64, req.CustID)
+	_, chqError := DB.Exec(`UPDATE cheques set passed = true where masterid=$1 and amount = $2`, req.CustID, int64(statement.Deposit.Float64))
+	if chqError != nil{
+		log.Println(chqError.Error())
+		log.Println("No pending cheque for this entry, please check.")
+	}
 	// create a journal id
 	c.JSON(200, "Success")
 }

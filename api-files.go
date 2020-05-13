@@ -4,6 +4,7 @@ import (
 	"github.com/360EntSecGroup-Skylar/excelize"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"github.com/kierdavis/dateparser"
 	"io"
 	"log"
 	"os"
@@ -77,11 +78,19 @@ func SaveMapToDB(excelMap MapType, keys KeyType,
 	for i := range dates {
 		withdrawl, _ := strconv.ParseFloat(withdrawls[i], 64)
 		deposit, _ := strconv.ParseFloat(deposits[i], 64)
+		parser := dateparser.Parser{DayFirst:true, Fuzzy:true}
+		t, derr := parser.Parse(dates[i])
+		if derr!=nil{
+			log.Println("Failed to parse the date", derr.Error())
+			tx.Rollback()
+			return derr
+		}
+		date := t.Format("2006-01-02")
 		if withdrawl != 0 {
 			_, err := tx.Exec(`INSERT INTO 
     						statement(date, narration,  refno,withdrawl,bank_id,company_id,import_id)
     						values($1,$2,$3,$4,$5,$6,$7)`,
-				dates[i], narrations[i], refNos[i], withdrawl, bankId, companyId, importID.String())
+				date, narrations[i], refNos[i], withdrawl, bankId, companyId, importID.String())
 			if err != nil {
 				log.Println("Failed during insert in statement at index: ", i)
 				log.Printf("\n Got the following error: %s", err.Error())
@@ -92,7 +101,7 @@ func SaveMapToDB(excelMap MapType, keys KeyType,
 			_, err := tx.Exec(`INSERT INTO 
     						statement(date, narration,  refno, deposit,bank_id,company_id,import_id)
     						values($1,$2,$3,$4,$5,$6,$7)`,
-				dates[i], narrations[i], refNos[i], deposit, bankId, companyId, importID.String())
+				date, narrations[i], refNos[i], deposit, bankId, companyId, importID.String())
 			if err != nil {
 				log.Println("Failed during insert in statement at index: ", i)
 				log.Printf("\n Got the following error: %s", err.Error())

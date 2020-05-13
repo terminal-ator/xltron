@@ -3,6 +3,7 @@ package main
 import (
 	"database/sql"
 	"fmt"
+	"github.com/google/uuid"
 	"io"
 	"log"
 	"net/http"
@@ -158,7 +159,7 @@ func PostFileUploadDirect(c *gin.Context) {
 
 	sCnt, eCnt, err := SaveCsvToDB(csvFileName, keys, company, int32(salesID), int64(x))
 
-	log.Println(sCnt)
+	log.Println(sCnt, eCnt)
 	if err != nil {
 		log.Println("Error while saving", err.Error())
 		c.String(http.StatusInternalServerError, err.Error())
@@ -167,7 +168,7 @@ func PostFileUploadDirect(c *gin.Context) {
 	// headerString, _ := json.Marshal(&fileResponse)
 
 	c.JSON(http.StatusOK, gin.H{
-		"sucess": sCnt,
+		"success": sCnt,
 		"error":  eCnt,
 	})
 }
@@ -206,19 +207,15 @@ func PutCsvToDB(c *gin.Context) {
 }
 
 type LedgerEntry struct {
-	CustID int64 `json:"cust_id"`
-	Cash   int64 `json:"cash"`
-}
-
-type LedgerRequest struct {
-	Date    string        `json:"date"`
-	Ledgers []LedgerEntry `json:"ledger_entry"`
+	MasterID int64  `json:"master_id"`
+	Amount   int64  `json:"amount"`
+	Date     string `json:"date"`
 }
 
 func PostCashToLedger(c *gin.Context) {
-	company := c.Param("company")
+	company := c.MustGet("company").(string)
 	companyID, _ := strconv.Atoi(company)
-	var Ledger LedgerRequest
+	var Ledger []LedgerEntry
 	err := c.BindJSON(&Ledger)
 
 	if err != nil {
@@ -234,10 +231,10 @@ func PostCashToLedger(c *gin.Context) {
 	ErrorHandler(err, c)
 	tx, _ := DB.Begin()
 	var j models.AJournal
-	j.Date = Ledger.Date
+	j.Date = Ledger[0].Date
 	j.CompanyID = int32(companyID)
-	j.Narration = "Cash paid on" + Ledger.Date
-	j.Refno = "cash entry, no ref req"
+	j.Narration = "Cash"
+	j.Refno = uuid.New().String()
 	j.Type = "Receipt"
 	err = j.SaveNoSttmt(tx)
 	if err != nil {
@@ -249,11 +246,11 @@ func PostCashToLedger(c *gin.Context) {
 
 	var sumOfLedger = 0.0
 
-	for _, ledger := range Ledger.Ledgers {
+	for _, ledger := range Ledger {
 		// _, err := DB.Exec(`Insert into ledger(cust_id,ledger_type,ledger_date,from_customer,company_id) values($1,$2,$3,$4,$5)`, ledger.CustID, "Cash", Ledger.Date, ledger.Cash, companyID)
 
 		// create a posting
-		var p = &models.Posting{Amount: float64(-ledger.Cash), AssetType: "Rs.", CompanyID: int32(companyID), JournalID: j.ID, MasterID: int32(ledger.CustID)}
+		var p = &models.Posting{Amount: float64(-ledger.Amount), AssetType: "Rs.", CompanyID: int32(companyID), JournalID: j.ID, MasterID: int32(ledger.MasterID)}
 
 		err := p.Save(tx)
 		if err != nil {
@@ -262,7 +259,7 @@ func PostCashToLedger(c *gin.Context) {
 			c.String(http.StatusInternalServerError, err.Error())
 			return
 		}
-		sumOfLedger += float64(ledger.Cash)
+		sumOfLedger += float64(ledger.Amount)
 	}
 
 	// create final post for cash
@@ -389,7 +386,7 @@ func QuickLedger(c *gin.Context) {
 	// create journal
 	jrnl := &models.AJournal{
 		Date:      req.Date,
-		Narration: "Quick Add",
+		Narration: "Fast add",
 		Refno:     req.Type,
 		CompanyID: cID,
 		Type:      req.ToFrom,

@@ -16,6 +16,7 @@ type AJournal struct {
 	Type        string    `json:"type"`
 	StatementID int32     `json:"sttmnt_id"`
 	Postings    []Posting `json:"postings"`
+	Amount      float64   `json:"amount"`
 }
 
 func (j *AJournal) Save(db *sql.Tx) error {
