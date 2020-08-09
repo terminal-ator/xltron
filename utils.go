@@ -39,8 +39,8 @@ func CsvToMap(filePath string) (string, []string, error) {
 		if error == io.EOF {
 			break
 		} else if error != nil {
-			log.Print("her" + error.Error())
-			break
+			log.Print("here: " + error.Error())
+			continue
 		}
 		for index, value := range line {
 			csvMap[headerArray[index]] = append(csvMap[headerArray[index]], value)

@@ -155,5 +155,7 @@ func SaveCsvToDB(filename string, keys map[string]string, company string, saleID
 			successCount++
 		}
 	}
+
+	log.Printf("Got sales with Success: %d and errors: %d", successCount, errorCount)
 	return successCount, errorCount, nil
 }

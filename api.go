@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"strings"
+	"time"
 
 	"database/sql"
 
@@ -244,6 +245,19 @@ func GetCompanies(c *gin.Context) {
 func FetchStatements(c *gin.Context) {
 	bank_id := c.Param("bank")
 	yearID := c.MustGet("yearID")
+	startDate := c.Query("sd")
+	endDate := c.Query("ed")
+
+	if startDate!=""{
+		if endDate==""{
+			endDate = startDate
+		}
+	}else{
+		endDate = time.Now().Format("2006-01-02")
+		startDate = time.Date(time.Now().Year(),time.Now().Month(),1,0,0,0,0,time.Now().Location()).Format("2006-01-02")
+	}
+
+
 	var statements *sql.Rows
 	var dbError error
 	if bank_id == "all" {
@@ -255,7 +269,8 @@ func FetchStatements(c *gin.Context) {
 		from statement where bank_id=$1 
 		and date >= (select startdate from company_years where id = $2)
 		and date<=(select enddate from company_years where id = $2)
-		order by date, withdrawl, deposit`, bank_id, yearID)
+		and date >= $3 and date<=$4
+		order by date, withdrawl, deposit`, bank_id, yearID, startDate, endDate)
 	}
 
 	stats := make([]models.Statement, 0)

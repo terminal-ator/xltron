@@ -309,7 +309,7 @@ func GetPostingForID(c *gin.Context) {
 					 WHERE a.masterid = $1
 					 AND b.date >= (select startdate from company_years where id = $2)
 					 AND b.date <= (select enddate from company_years where id = $2 )
-					 order by b.date desc`, id, yearID)
+					 order by b.date desc, b.refno desc`, id, yearID)
 	ErrorHandler(err, c)
 
 	for rows.Next() {
