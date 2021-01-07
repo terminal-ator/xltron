@@ -301,7 +301,28 @@ func GetPostingForID(c *gin.Context) {
 	yearID := c.MustGet("yearID")
 	var journals []models.Journal
 
-	rows, err := DB.Query(`SELECT 
+	var s_date = c.Query("start")
+	var e_date = c.Query("end")
+
+	var rows *sql.Rows
+	var err error
+
+	if s_date != "" && e_date !="" {
+		QUERY := `SELECT 
+					 a.id, b.date, b.id, b.narration, b.refno, b.sttmt_id,a.amount
+					 FROM POSTING a
+					 INNER JOIN
+					 JOURNAL b on a.journalid = b.id
+					 WHERE a.masterid = $1
+					 AND b.date >= $2
+					 AND b.date <= $3
+					 order by b.date desc, b.refno desc
+                 `
+
+		rows, err = DB.Query(QUERY, id, s_date, e_date)
+
+	}else{
+		rows, err = DB.Query(`SELECT 
 					 a.id, b.date, b.id, b.narration, b.refno, b.sttmt_id,a.amount
 					 FROM POSTING a
 					 INNER JOIN
@@ -310,6 +331,9 @@ func GetPostingForID(c *gin.Context) {
 					 AND b.date >= (select startdate from company_years where id = $2)
 					 AND b.date <= (select enddate from company_years where id = $2 )
 					 order by b.date desc, b.refno desc`, id, yearID)
+	}
+
+
 	ErrorHandler(err, c)
 
 	for rows.Next() {

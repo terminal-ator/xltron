@@ -76,6 +76,7 @@ type Recommended struct {
 	Name   string `json:"name"`
 	Date   string `json:"date"`
 	Amount string `json:"amount"`
+	MasterID int64 `json:"master_id"`
 }
 
 func GetRecommended(c *gin.Context) {
@@ -108,7 +109,7 @@ func GetRecommended(c *gin.Context) {
 
 func GetAllPendingCheques(c *gin.Context){
 	company := c.MustGet("company")
-	rows, err := DB.Query(`select c.id, am.name, c.date, c.amount from account_master am 
+	rows, err := DB.Query(`select c.id, am.name, c.date, c.amount, c.masterid from account_master am 
 							inner join cheques c on am.id = c.masterid where am.companyid = $1 and c.passed is false order by c.date desc`, company)
 
 	if err!=nil{
@@ -120,7 +121,7 @@ func GetAllPendingCheques(c *gin.Context){
 
 	for rows.Next(){
 		var chq Recommended
-		readErr := rows.Scan(&chq.ID, &chq.Name, &chq.Date, &chq.Amount)
+		readErr := rows.Scan(&chq.ID, &chq.Name, &chq.Date, &chq.Amount, &chq.MasterID)
 		if readErr!=nil{
 			ErrorHandler(err, c, "Failed while reading all pending cheques")
 			return
@@ -177,5 +178,46 @@ func GetDayBook(c *gin.Context){
 	}
 
 	c.JSON(200, journals)
+
+}
+
+func DeleteJournal(c *gin.Context){
+
+	jid := c.Param("jid")
+	journal_id, err := strconv.Atoi(jid)
+	if err!=nil{
+		c.String(403, "Wrong journal id provided")
+		return
+	}
+
+	tx, err := DB.Begin()
+
+	if err!=nil{
+		log.Println("Failed to initialize the transaction, exiting")
+		c.String(500,"Some something occurred")
+		return
+	}
+
+	_, readErr := tx.Exec(`DELETE FROM posting where journalid = $1`, journal_id)
+
+	if readErr!=nil{
+		log.Println("Failed to delete the journal")
+		tx.Rollback()
+		c.String(404,"No postings found")
+		return
+	}
+
+	_, journalErr := tx.Exec(`DELETE FROM journal where id=$1`, journal_id)
+
+	if journalErr!=nil{
+		log.Println("Failed to delete the parent journal exiting")
+		tx.Rollback()
+		c.String(404, "No journal found")
+		return
+	}
+
+	tx.Commit()
+
+	c.String(200,"Delete successful")
 
 }

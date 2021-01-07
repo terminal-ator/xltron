@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/terminal-ator/xltron/api"
 	"github.com/terminal-ator/xltron/models"
 	"log"
 	"strings"
@@ -14,6 +15,7 @@ type CreateMasterReq struct {
 	GroupID       int64  `json:"group_id"`
 	BeatID        int64  `json:"beat_id"`
 	InterfaceCode string `json:"i_code"`
+	Opening float64 `json:"opening"`
 }
 
 func PostCreateMaster(c *gin.Context) {
@@ -38,8 +40,9 @@ func PostCreateMaster(c *gin.Context) {
 		return
 	}
 
-	row := trx.QueryRow(`INSERT INTO ACCOUNT_MASTER(name, cust_id, beatid, groupid, companyid, isactive)
-						values($1,$2,$3,$4,$5,$6) returning id`, req.Name, 99999, req.BeatID, req.GroupID, company, true)
+	row := trx.QueryRow(`INSERT INTO
+    					ACCOUNT_MASTER(name, cust_id, beatid, groupid, companyid, isactive, opening)
+						values($1,$2,$3,$4,$5,$6, $7) returning id`, req.Name, 99999, req.BeatID, req.GroupID, company, true, req.Opening)
 
 	var rowID int64
 	err = row.Scan(&rowID)
@@ -184,6 +187,15 @@ func UpdateMaster(c *gin.Context) {
 		ErrorHandler(err, c, "While fetching error")
 		return
 	}
+
+
+	// update balance.
+	balanceError := api.PostEditOpeningBalance(DB, mstr.ID, Master.OpeningBalance)
+
+	if balanceError!=nil{
+		log.Println("Failed to update opening balance.")
+	}
+
 
 	c.JSON(200, mstr)
 

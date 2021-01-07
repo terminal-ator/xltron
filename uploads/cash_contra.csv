@@ -1,6 +1,0 @@
-"id"|"id"|"date"|"narration"|"refno"|"created_at"|"created_at"|"updated_at"|"updated_at"|"deleted_at"|"deleted_at"|"user_id"|"master_id"|"cust_id"|"cust_id"|"deposit"|"withdrawl"|"bank_id"|"company_id"|"company_id"|"ismaster"|"name"|"address"|"area"|"interface_code"|"chq_flg"|"group_id"
-4242|3453|2019-04-02|CASH DEP DADRI|"000000000000000"|2019-10-29 14:58:30||||||1||1244|1244|500000||4|2|2|1|Cash|||""|1|3
-4256|3453|2019-04-03|CASH DEP DADRI|"000000000000000"|2019-10-29 14:58:30||||||1||1244|1244|300000||4|2|2|1|Cash|||""|1|3
-4261|3453|2019-04-04|CASH DEP DADRI|"000000000000000"|2019-10-29 14:58:30||||||1||1244|1244|270000||4|2|2|1|Cash|||""|1|3
-4285|3453|2019-04-06|CASH DEP DADRI|"000000000000000"|2019-10-29 14:58:30||||||1||1244|1244|230000||4|2|2|1|Cash|||""|1|3
-4299|3453|2019-04-08|CASH DEP DADRI|"000000000000000"|2019-10-29 14:58:30||||||1||1244|1244|165000||4|2|2|1|Cash|||""|1|3

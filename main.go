@@ -63,6 +63,7 @@ func main() {
 	r.GET("/ledger", GetLedgerForCustID)
 	r.PUT("/ledger/:company", QuickLedger)
 	r.GET("/istats/:id", GetStatementById)
+	r.POST("/upl", SalesUploadByExcel)
 
 	// new account logic
 	r.GET("/accounts", GetAllAccounts)
@@ -86,6 +87,7 @@ func main() {
 	r.GET("/journal/:id", GetJournal)
 	r.GET("/journals", GetDayBook)
 	r.POST("/journal", MakeJournal)
+
 
 	r.GET("/saveid", updateCUSTID)
 
