@@ -2,6 +2,8 @@ package main
 
 import (
 	"database/sql"
+	"github.com/terminal-ator/xltron/api"
+	"github.com/terminal-ator/xltron/handlers"
 	"log"
 	"time"
 
@@ -28,7 +30,7 @@ func companyExtractor() gin.HandlerFunc {
 }
 
 func main() {
-	connStr := "user=postgres password=colgate dbname=postgres sslmode=disable"
+	connStr := "user=administrator password=Hxllx@wxrld dbname=postgres sslmode=disable"
 	var err error
 	DB, err = sql.Open("postgres", connStr)
 
@@ -59,14 +61,18 @@ func main() {
 	r.POST("/upload", PostFileUploadDirect)
 	r.POST("/parseUpload", PutCsvToDB)
 	r.GET("/uplcompany/:company", GetCompanies)
-	r.POST("/ledger/:company", PostCashToLedger)
+
+	receiptService := api.ConstructReceiptService(DB)
+	receiptHandler := handlers.ConstructReceiptHandler(&receiptService)
+
+	r.POST("/ledger/:company", receiptHandler.PostReceipt)
 	r.GET("/ledger", GetLedgerForCustID)
 	r.PUT("/ledger/:company", QuickLedger)
 	r.GET("/istats/:id", GetStatementById)
 	r.POST("/upl", SalesUploadByExcel)
 
 	// new account logic
-	r.GET("/accounts", GetAllAccounts)
+
 
 	cheque := r.Group("/cheque")
 	{
@@ -78,8 +84,29 @@ func main() {
 		cheque.GET("/pending", GetAllPendingCheques)
 	}
 
+	// company logic
+	companyService := api.ConstructCompanyService(DB)
+	companyHandler := handlers.ConstructCompanyHandle(&companyService)
+	company := r.Group("/company")
+	{
+		company.POST("/", companyHandler.PostNewCompany)
+	}
+
+	// beat logic
+	beatService := api.ConstructBeatService(DB)
+	beatHandler := handlers.ConstructBeatHandler(&beatService)
+	beat := r.Group("/beats")
+	{
+		beat.GET("/:companyID",beatHandler.GetBeatsAndGroups)
+		beat.POST("/make/:name", beatHandler.PostQuickCreateBeat)
+	}
+
 	// new journal logic
-	r.GET("/postings/:id", GetPostingForID)
+
+	postingService := api.ConstructPostingService(DB)
+	postingHandler := handlers.ConstructPostingHandler(&companyService, &postingService)
+
+	r.GET("/postings/:id", postingHandler.GetJournalsForID)
 	r.GET("/statement/download/:bank", DownloadStatement)
 	r.POST("/statement/", saveStatementToCustID)
 	r.POST("/statement/import", PostStatementUpload)
@@ -91,9 +118,13 @@ func main() {
 
 	r.GET("/saveid", updateCUSTID)
 
+	masterService := api.ConstructMasterService(DB)
+	masterHandler := handlers.ConstructMasterHandler(&masterService)
 	// masters
-	r.POST("/master/:company", PostCreateMaster)
-	r.PUT("/master/:company", UpdateMaster)
+	//r.POST("/master/:company", PostCreateMaster)
+	r.POST("/master/:company", masterHandler.PostCreateMaster)
+	r.PUT("/master/:company", masterHandler.PutUpdateMaster)
+	r.GET("/accounts", masterHandler.GetAllAccounts )
 
 	r.GET("/beat/:company", FetchBeats)
 	r.GET("/years", GetCompanyYears)
@@ -101,5 +132,9 @@ func main() {
 	// error handler
 	r.GET("/errors/:company", GetErrorLedgers)
 	r.POST("/errors", MergeErrors)
+
+
+
+
 	r.Run(":8080") // listen and serve on 0.0.0.0:8080
 }

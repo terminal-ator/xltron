@@ -132,11 +132,7 @@ func ExcelToMap(fileName string) (MapType, error) {
 		log.Println("Error while opening excels file: ", err.Error())
 		return nil, err
 	}
-	rows, err := f.GetRows("Sheet 1")
-	if err != nil {
-		log.Println("Error while reading sheet1", err.Error())
-		return nil, err
-	}
+	rows := f.GetRows("Sheet 1")
 	var headers []string
 	var excelMap map[string][]string
 	excelMap = make(map[string][]string)

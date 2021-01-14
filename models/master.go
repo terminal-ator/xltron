@@ -20,7 +20,7 @@ type Master struct {
 	Balance       float64        `json:"balance"`
 	BeatID        int64          `json:"beat_id"`
 	InterfaceCode string         `json:"i_code"`
-	OpeningBalance float64 `json:"opening"`
+	OpeningBalance float64 		`json:"opening_balance"`
 }
 
 func GetMaster(db *sql.DB, Id int64) (Master, error) {

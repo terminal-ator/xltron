@@ -298,7 +298,6 @@ func GetLedgerForCustID(c *gin.Context) {
 
 func GetPostingForID(c *gin.Context) {
 	id := c.Param("id")
-	yearID := c.MustGet("yearID")
 	var journals []models.Journal
 
 	var s_date = c.Query("start")
@@ -318,8 +317,9 @@ func GetPostingForID(c *gin.Context) {
 					 AND b.date <= $3
 					 order by b.date desc, b.refno desc
                  `
-
 		rows, err = DB.Query(QUERY, id, s_date, e_date)
+
+
 
 	}else{
 		rows, err = DB.Query(`SELECT 
@@ -327,10 +327,8 @@ func GetPostingForID(c *gin.Context) {
 					 FROM POSTING a
 					 INNER JOIN
 					 JOURNAL b on a.journalid = b.id
-					 WHERE a.masterid = $1
-					 AND b.date >= (select startdate from company_years where id = $2)
-					 AND b.date <= (select enddate from company_years where id = $2 )
-					 order by b.date desc, b.refno desc`, id, yearID)
+					 WHERE a.masterid = $1 
+					 order by b.date desc, b.refno desc`, id	)
 	}
 
 

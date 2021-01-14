@@ -70,7 +70,7 @@ func SaveToJournal(row LedgerRow, custID int32, saleID int32) error {
 	post1.AssetType = "Rs."
 	post1.CompanyID = journal.CompanyID
 	post1.MasterID = custID
-	post1.Amount = row.Amount
+	post1.Amount = -row.Amount
 
 	err = post1.Save(tx)
 	log.Println("Saved first posting")
@@ -83,7 +83,7 @@ func SaveToJournal(row LedgerRow, custID int32, saleID int32) error {
 	post2.AssetType = "Rs."
 	post2.CompanyID = journal.CompanyID
 	post2.MasterID = saleID
-	post2.Amount = -row.Amount
+	post2.Amount = row.Amount
 
 	err = post2.Save(tx)
 

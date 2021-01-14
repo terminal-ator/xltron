@@ -54,3 +54,12 @@ type ErrorSales struct {
 	Name          string `json:"name"`
 	InterfaceCode string `json:"interface_code"`
 }
+
+type Beat struct{
+	ID int64 `json:"id"`
+	Name string `json:"name"`
+	Addn1 string `json:"addn1"`
+	Addn2 string `json:"addn2"`
+	CompanyID int64 `json:"company_id"`
+	ShortName string `json:"short_name"`
+}

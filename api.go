@@ -47,41 +47,6 @@ func GetAllMasters(c *gin.Context) {
 	})
 }
 
-func GetAllAccounts(c *gin.Context) {
-	company := c.MustGet("company")
-	yearID := c.MustGet("yearID")
-	//log.Print(comp)
-	//company := c.Param("company")
-
-	//query := `SELECT A.ID,A.NAME,A.COMPANYID, A.CHQ_FLG, A.GROUPID, A.beatid, B.Balance from ACCOUNT_MASTER A INNER JOIN(
-	//		SELECT AM.ID, COALESCE(SUM(P.AMOUNT),0) AS BALANCE FROM ACCOUNT_MASTER AM LEFT OUTER JOIN POSTING P ON AM.ID = P.MASTERID
-	//		WHERE AM.COMPANYID = $1 GROUP BY AM.ID) B ON A.ID=B.ID ORDER BY NAME`
-
-	query := `select 
-       			account_master.id, account_master.name, account_master.companyid ,account_master.chq_flg, account_master.groupid , account_master.beatid, coalesce(sum(p.amount),0) 
-					from account_master 
-					    left outer join 
-					    (select * from posting where id in (
-							select p.id from journal inner join posting p on journal.id = p.journalid
-							where date>=(select startDate from company_years where id = $1) and date <= (select endDate from company_years where id = $1))) p
-    					on account_master.id = p.masterid
-    					where companyid = $2
-						group by 
-						    account_master.id, account_master.name,account_master.chq_flg, account_master.beatid, account_master.groupid 
-						order by account_master.name`
-
-	rows, err := DB.Query(query, yearID, company)
-	ErrorHandler(err, c)
-	masters := make([]models.Master, 0)
-	for rows.Next() {
-		var mstr models.Master
-		err := rows.Scan(&mstr.CustID, &mstr.Name, &mstr.CompanyID, &mstr.ChequeFlag, &mstr.GroupID, &mstr.BeatID, &mstr.Balance)
-		ErrorHandler(err, c)
-		masters = append(masters, mstr)
-	}
-	c.JSON(200, masters)
-}
-
 func PostMasterToStatement(c *gin.Context) {
 	var req MasterRequest
 	err := c.BindJSON(&req)
