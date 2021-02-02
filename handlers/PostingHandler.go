@@ -3,8 +3,10 @@ package handlers
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/terminal-ator/xltron/api"
+	"github.com/terminal-ator/xltron/models"
 	"log"
 	"strconv"
+	"time"
 )
 
 type PostingHandler struct {
@@ -27,28 +29,9 @@ func (ps *PostingHandler) GetJournalsForID(c *gin.Context){
 	endDate := c.Query("end")
 
 	if startDate=="" && endDate==""{
-
 		// construct last week dates
-
-		// get yearID
-		yID, yErr := c.Get("yearID")
-		if !yErr{
-			log.Println("No year found, please provide start and end date")
-			c.String(403,"No year found, please provide a start and end date")
-			return
-		}
-		yearID, err := strconv.Atoi(yID.(string))
-		if err!=nil{
-			c.String(403,"The year id has to be a number")
-			return
-		}
-
-		startDate, endDate, err = ps.companyService.GetStartAndEndDateForYearID(int64(yearID))
-
-		if err!=nil{
-			c.String(403,"The year is not valid, please provide dates")
-			return
-		}
+		endDate = time.Now().Format("2006-01-02")
+		startDate = time.Now().AddDate(0,0,-7).Format("2006-01-02")
 	}
 
 	masterID, err := strconv.Atoi(id)
@@ -65,4 +48,50 @@ func (ps *PostingHandler) GetJournalsForID(c *gin.Context){
 	}
 
 	c.JSON(200, result)
+}
+
+type DeleteRequest struct {
+	JournalID int64 `json:"journal_id"`
+}
+func (ps *PostingHandler) DeleteJournalID(c *gin.Context){
+
+	jid := c.Param("id")
+	journalID ,err := strconv.Atoi(jid)
+
+	if err!=nil{
+		log.Println("Invalid request",err.Error())
+		c.String(403, "Invalid request params")
+		return
+	}
+
+	err = ps.postingService.DeleteJournal(int64(journalID))
+
+	if err!=nil{
+		log.Println("Invalid request",err.Error())
+		c.String(403, "Invalid request params")
+		return
+	}
+
+	c.JSON(200, gin.H{"deletedJournal": journalID})
+
+}
+
+func (ps *PostingHandler) UpdateJournal(c *gin.Context){
+	var Journal models.AJournal
+	err := c.BindJSON(&Journal)
+
+	if err!=nil{
+		log.Println("Failed to bind to the json object in journal creation", err.Error())
+		c.String(403,"Invalid format")
+		return
+	}
+	journal, err := ps.postingService.MakeOrUpdateJournal(Journal)
+
+	if err!=nil{
+		log.Println("Failed to create journal exiting", err.Error())
+		c.String(500,"Failed to save the journal")
+		return
+	}
+
+	c.JSON(200, journal)
 }

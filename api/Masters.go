@@ -164,7 +164,7 @@ func (ms *masterService) GetMastersForCompany(companyID int) ([]models.Master, e
 
 	query := `select 
        			account_master.id, account_master.name, account_master.companyid ,account_master.chq_flg, account_master.groupid ,
-       			account_master.beatid, coalesce(sum(p.amount),0), account_master.opening
+       			account_master.beatid, coalesce(sum(p.amount)+coalesce(account_master.opening,0),0), account_master.opening
 					from account_master 
 					    left outer join 
 					    (select * from posting where id in (

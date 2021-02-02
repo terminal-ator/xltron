@@ -38,7 +38,8 @@ func main() {
 		log.Fatal(err)
 	}
 
-	r := gin.Default()
+	router := gin.Default()
+	r := router.Group("/api")
 	config := cors.DefaultConfig()
 	config.AllowAllOrigins = true
 	config.AllowHeaders = append(config.AllowHeaders, "Authorization", "yearid")
@@ -50,30 +51,19 @@ func main() {
 		})
 	})
 
-	r.GET("/statements/:bank", FetchStatements)
-	r.GET("/cstatements/:company", GetConsolidatedStatements)
-	r.GET("/masters/:company", GetAllMasters)
-	r.POST("/statements", PostMasterToStatement)
-	r.GET("/banks/:company", GetAllBanks)
-	r.GET("/companies", GetAllCompanies)
+	handlers.InitStatement(r, DB)
 	r.GET("/groups", GetAllGroups)
-	r.POST("/masters", CreateMaster)
 	r.POST("/upload", PostFileUploadDirect)
 	r.POST("/parseUpload", PutCsvToDB)
 	r.GET("/uplcompany/:company", GetCompanies)
-
 	receiptService := api.ConstructReceiptService(DB)
 	receiptHandler := handlers.ConstructReceiptHandler(&receiptService)
-
 	r.POST("/ledger/:company", receiptHandler.PostReceipt)
 	r.GET("/ledger", GetLedgerForCustID)
 	r.PUT("/ledger/:company", QuickLedger)
 	r.GET("/istats/:id", GetStatementById)
 	r.POST("/upl", SalesUploadByExcel)
-
 	// new account logic
-
-
 	cheque := r.Group("/cheque")
 	{
 		cheque.POST("/", AddCheque)
@@ -83,14 +73,8 @@ func main() {
 		cheque.GET("/recommended/:amount", GetRecommended)
 		cheque.GET("/pending", GetAllPendingCheques)
 	}
-
 	// company logic
-	companyService := api.ConstructCompanyService(DB)
-	companyHandler := handlers.ConstructCompanyHandle(&companyService)
-	company := r.Group("/company")
-	{
-		company.POST("/", companyHandler.PostNewCompany)
-	}
+	handlers.InitCompany(DB, r)
 
 	// beat logic
 	beatService := api.ConstructBeatService(DB)
@@ -100,41 +84,23 @@ func main() {
 		beat.GET("/:companyID",beatHandler.GetBeatsAndGroups)
 		beat.POST("/make/:name", beatHandler.PostQuickCreateBeat)
 	}
-
 	// new journal logic
-
 	postingService := api.ConstructPostingService(DB)
+	companyService := api.ConstructCompanyService(DB)
 	postingHandler := handlers.ConstructPostingHandler(&companyService, &postingService)
-
 	r.GET("/postings/:id", postingHandler.GetJournalsForID)
-	r.GET("/statement/download/:bank", DownloadStatement)
-	r.POST("/statement/", saveStatementToCustID)
-	r.POST("/statement/import", PostStatementUpload)
-	r.GET("/statement/template", GetStatementTemplate)
+	r.DELETE("/postings/:id", postingHandler.DeleteJournalID)
 	r.GET("/journal/:id", GetJournal)
 	r.GET("/journals", GetDayBook)
-	r.POST("/journal", MakeJournal)
-
-
+	r.POST("/journal", postingHandler.UpdateJournal)
 	r.GET("/saveid", updateCUSTID)
-
-	masterService := api.ConstructMasterService(DB)
-	masterHandler := handlers.ConstructMasterHandler(&masterService)
-	// masters
-	//r.POST("/master/:company", PostCreateMaster)
-	r.POST("/master/:company", masterHandler.PostCreateMaster)
-	r.PUT("/master/:company", masterHandler.PutUpdateMaster)
-	r.GET("/accounts", masterHandler.GetAllAccounts )
-
+	handlers.InitMaster(r, DB)
 	r.GET("/beat/:company", FetchBeats)
 	r.GET("/years", GetCompanyYears)
-
 	// error handler
 	r.GET("/errors/:company", GetErrorLedgers)
 	r.POST("/errors", MergeErrors)
-
-
-
-
-	r.Run(":8080") // listen and serve on 0.0.0.0:8080
+	// users logic
+	handlers.InitUserHandlers(DB, r)
+	router.Run(":8080") // listen and serve on 0.0.0.0:8080
 }

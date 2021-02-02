@@ -72,45 +72,6 @@ func PostMasterToStatement(c *gin.Context) {
 		"message": "Updated statement",
 	})
 }
-
-func GetAllBanks(c *gin.Context) {
-	bank := c.Param("company")
-	banks, err := DB.Query("Select id, name from banks where company_id=$1", bank)
-	if err != nil {
-		log.Fatal(err)
-	}
-	bankArray := make([]models.Bank, 0)
-	for banks.Next() {
-		var bank models.Bank
-		if err := banks.Scan(&bank.ID, &bank.Name); err != nil {
-			log.Fatal(err)
-		}
-		bankArray = append(bankArray, bank)
-	}
-
-	c.JSON(200, gin.H{
-		"banks": bankArray,
-	})
-}
-
-func GetAllCompanies(c *gin.Context) {
-	companies, err := DB.Query("Select * from company")
-	if err != nil {
-		log.Fatal(err)
-	}
-	compArray := make([]models.Company, 0)
-	for companies.Next() {
-		var comp models.Company
-		if err := companies.Scan(&comp.ID, &comp.Name, &comp.Year); err != nil {
-			log.Fatal(err)
-		}
-		compArray = append(compArray, comp)
-	}
-	c.JSON(200, gin.H{
-		"companies": compArray,
-	})
-}
-
 func GetConsolidatedStatements(c *gin.Context) {
 	company := c.Param("company")
 	statements, dbError := DB.Query(ALL_STATEMENT_WITH_COMPANY_AND_BANK, company)
@@ -265,7 +226,6 @@ func FetchStatements(c *gin.Context) {
 			}
 		}
 		if dbNError == nil {
-
 			master.Scan()
 			stat.Master = nMaster
 		}

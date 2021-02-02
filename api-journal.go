@@ -109,19 +109,23 @@ func GetRecommended(c *gin.Context) {
 
 func GetAllPendingCheques(c *gin.Context){
 	company := c.MustGet("company")
-	rows, err := DB.Query(`select c.id, am.name, c.date, c.amount, c.masterid from account_master am 
-							inner join cheques c on am.id = c.masterid where am.companyid = $1 and c.passed is false order by c.date desc`, company)
+	rows, err := DB.Query(`select c.id, am.name, c.date, c.amount, c.masterid, c.type, c.name, c.number 
+							from account_master am 
+							inner join cheques c 
+							on am.id = c.masterid 
+							where am.companyid = $1 and c.passed is false order by c.date desc`, company)
 
 	if err!=nil{
 		ErrorHandler(err, c, "Failed to get all pending cheques")
 		return
 	}
 
-	var chqs []Recommended
+	var chqs []models.Cheque
 
 	for rows.Next(){
-		var chq Recommended
-		readErr := rows.Scan(&chq.ID, &chq.Name, &chq.Date, &chq.Amount, &chq.MasterID)
+		var chq models.Cheque
+		readErr := rows.Scan(&chq.ID, &chq.MasterName, &chq.Date, &chq.Amount,
+			&chq.MasterID, &chq.Type, &chq.Name, &chq.Number)
 		if readErr!=nil{
 			ErrorHandler(err, c, "Failed while reading all pending cheques")
 			return

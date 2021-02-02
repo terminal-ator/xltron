@@ -1,11 +1,13 @@
 package handlers
 
 import (
+	"database/sql"
 	"github.com/gin-gonic/gin"
 	"github.com/terminal-ator/xltron/api"
+	"github.com/terminal-ator/xltron/auth"
 	"github.com/terminal-ator/xltron/models"
+	"github.com/terminal-ator/xltron/utils"
 	"log"
-	"strconv"
 )
 
 type MasterHandler struct {
@@ -17,22 +19,39 @@ func ConstructMasterHandler(service api.MasterService) MasterHandler{
 		service: service,
 	}
 }
+func InitMaster(r *gin.RouterGroup, DB *sql.DB){
+	masterService := api.ConstructMasterService(DB)
+	masterHandler := ConstructMasterHandler(&masterService)
+	master:= r.Group("/master")
+	master.Use(auth.CompanyTokenUser())
+	{
+		master.GET("/", masterHandler.GetAllAccounts)
+		master.POST("/", masterHandler.PostCreateMaster)
+		master.PUT("/",masterHandler.PutUpdateMaster)
+	}
+
+}
 
 func (mh *MasterHandler) PostCreateMaster(c *gin.Context){
 	var master models.Master
-	company := c.Param("company")
-
+	cmp, has := c.Get("company")
+	if !has{
+		c.JSON(401,utils.GeneralResponse{
+			Code:    utils.RE_AUTH,
+			Message: "Token invalid",
+			Data:    nil,
+		})
+		return
+	}
+	company := int64(cmp.(float64))
 	err := c.BindJSON(&master)
-
 	if err!=nil{
 		log.Println("Failed to validate request", err.Error())
 		c.String(403, "Bad request")
 		return
 	}
 
-	cmp, _ := strconv.Atoi(company)
-
-	master.CompanyID = int32(cmp)
+	master.CompanyID = int32(company)
 
 	newMaster, masterErr := mh.service.CreateMaster(master)
 
@@ -47,19 +66,19 @@ func (mh *MasterHandler) PostCreateMaster(c *gin.Context){
 
 func (mh *MasterHandler) PutUpdateMaster(c *gin.Context){
 
-	company := c.Param("company")
-
-	cmpny, convError := strconv.Atoi(company)
-
-	if convError!=nil{
-		c.String(404, "Bad request")
+	cmp, has := c.Get("company")
+	if !has{
+		c.JSON(401,utils.GeneralResponse{
+			Code:    utils.RE_AUTH,
+			Message: "Token invalid",
+			Data:    nil,
+		})
 		return
 	}
-
+	company := int64(cmp.(float64))
 	var master models.Master
-
 	err := c.BindJSON(&master)
-	master.CompanyID = int32(cmpny)
+	master.CompanyID = int32(company)
 
 	if err != nil {
 		c.String(400, "Bad request")
@@ -81,15 +100,17 @@ func (mh *MasterHandler) PutUpdateMaster(c *gin.Context){
 }
 
 func (mh *MasterHandler)GetAllAccounts(c *gin.Context) {
-	company := c.MustGet("company")
-	cmpny := company.(string)
-	cmp, cerr := strconv.Atoi(cmpny)
-
-	if cerr!=nil{
-		c.String(400,"Bad request")
+	company, has := c.Get("company")
+	cmpny := int(company.(float64))
+	if !has{
+		c.JSON(401,utils.GeneralResponse{
+			Code:    utils.RE_AUTH,
+			Message: "Token invalid",
+			Data:    nil,
+		})
 		return
 	}
-	masters, err := mh.service.GetMastersForCompany(cmp)
+	masters, err := mh.service.GetMastersForCompany(cmpny)
 
 	if err!=nil{
 		c.String(500, "Failed to fetch masters")

@@ -3,6 +3,7 @@ package models
 import (
 	"database/sql"
 	"fmt"
+	"github.com/terminal-ator/xltron/interfaces"
 	"log"
 	"strings"
 )
@@ -18,7 +19,7 @@ type Posting struct {
 	Credit    float64 `json:"credit"`
 }
 
-func (post *Posting) Save(db *sql.Tx) error {
+func (post *Posting) Save(db interfaces.Queryable) error {
 
 	row := db.QueryRow(`INSERT INTO posting(masterID, journalID, assest_type,amount, company_id)
 		values($1, $2, $3, $4, $5) returning id`, post.MasterID, post.JournalID, post.AssetType, post.Amount, post.CompanyID)

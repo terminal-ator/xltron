@@ -5,8 +5,6 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
-
-	"github.com/gin-gonic/gin"
 )
 
 // Handles statement model
@@ -26,7 +24,7 @@ type Statement struct {
 	CompanyID int64           `json:"company_id"`
 }
 
-func (statement *Statement) SqlSelectByID(db *sql.DB, c *gin.Context, id int32) error {
+func (statement *Statement) SqlSelectByID(db *sql.DB, id int64) error {
 
 	row := db.QueryRow(selectQuery, id)
 	err := row.Scan(&statement.ID, &statement.Narration, &statement.Date, &statement.RefNo, &statement.CreatedAt,

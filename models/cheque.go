@@ -13,13 +13,17 @@ type Cheque struct {
 	JournalID int32   `json:"journal_id, omitempty",db:"journal_id""`
 	Amount    float64 `json:"amount",db:"amount"`
 	Passed    bool    `json:"passed",db:"passed"`
+	Type string `json:"type"`
+	Name string `json:"name"`
+	Number string `json:"number"`
+	MasterName string `json:"master_name"`
 }
 
 var chequeStruct = sqlbuilder.NewStruct(new(Cheque))
 
 func FetchChequesByMasterID(db *sql.DB, masterID int32) []Cheque {
 	var cheques []Cheque
-	rows, err := db.Query(`Select id, date, masterid, amount, passed from cheques where masterid=$1 order by date desc, id desc`, masterID)
+	rows, err := db.Query(`Select id, date, masterid, amount, passed, type, name, number from cheques where masterid=$1 order by date desc, id desc`, masterID)
 	if err != nil {
 		log.Println("Failed to process cheques", err)
 		return nil
@@ -28,7 +32,7 @@ func FetchChequesByMasterID(db *sql.DB, masterID int32) []Cheque {
 
 	for rows.Next() {
 		var chq Cheque
-		rerr := rows.Scan(&chq.ID, &chq.Date, &chq.MasterID, &chq.Amount, &chq.Passed)
+		rerr := rows.Scan(&chq.ID, &chq.Date, &chq.MasterID, &chq.Amount, &chq.Passed, &chq.Type, &chq.Name, &chq.Number)
 		if rerr != nil {
 			log.Println("Faield to read cheque structs", rerr.Error())
 			return nil
@@ -40,7 +44,8 @@ func FetchChequesByMasterID(db *sql.DB, masterID int32) []Cheque {
 }
 
 func (c *Cheque) Save(db *sql.DB) error {
-	row := db.QueryRow(`insert into cheques(date, masterid, amount) values($1, $2, $3) returning id`, c.Date, c.MasterID, c.Amount)
+	row := db.QueryRow(`insert into cheques(date, masterid, amount, type, name, number) values($1, $2, $3, $4, $5, $6) returning id`,
+		c.Date, c.MasterID, c.Amount, c.Type, c.Name, c.Number)
 	err := row.Scan(&c.ID)
 	if err != nil {
 		println("Error saving cheque", err.Error())

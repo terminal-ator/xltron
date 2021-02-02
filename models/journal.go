@@ -3,6 +3,7 @@ package models
 import (
 	"database/sql"
 	"fmt"
+	"github.com/terminal-ator/xltron/interfaces"
 	"log"
 	"strings"
 )
@@ -80,6 +81,7 @@ func (j *AJournal) MakeJournal(db *sql.Tx) error {
 	// save the journal
 	j.SaveNoSttmt(db)
 
+
 	for _, postings := range j.Postings {
 		postings.JournalID = j.ID
 		postings.Save(db)
@@ -87,6 +89,63 @@ func (j *AJournal) MakeJournal(db *sql.Tx) error {
 
 	return nil
 }
+
+func (j *AJournal) ReSave(db interfaces.Queryable) error{
+	_, err :=  db.Exec(`Insert into journal
+						(id,date, narration,refno,company_id,type)
+						values($1,$2,$3,$4,$5,$6) returning id`,
+		j.ID,j.Date, j.Narration, j.Refno, j.CompanyID, j.Type)
+	return  err
+
+}
+
+func (j *AJournal) UpdateJournalNew(db interfaces.Queryable) error{
+
+	// delete the whole Journal and postings
+	err := j.DeleteJournal(db)
+	if err!=nil{
+		log.Println("Failed to delete the journal", err.Error())
+		return err
+	}
+
+	err = j.ReSave(db)
+
+	if err!=nil{
+		log.Println("Failed while saving the journal", err.Error())
+		return err
+	}
+
+	// save all the postings.
+	for _, postings := range j.Postings {
+		postings.JournalID = j.ID
+		pErr := postings.Save(db)
+		if pErr!=nil{
+			log.Println("Failed to save posting", pErr.Error())
+			return pErr
+		}
+	}
+
+	return nil
+
+}
+
+
+func (j *AJournal) DeleteJournal (db interfaces.Queryable) error{
+
+	_, err := db.Exec(`Delete from posting where journalid=$1`, j.ID)
+	if err!=nil{
+		log.Println("No postings found", err.Error())
+		return err
+	}
+
+	_, err = db.Exec(`Delete from journal where id = $1`, j.ID)
+	if err!=nil{
+		log.Println("Failed to delete journal,", err.Error())
+		return err
+	}
+	return nil
+}
+
 
 func (j *AJournal) UpdateJournal(db *sql.Tx) error {
 

@@ -14,10 +14,14 @@ type HistoryResult struct{
 	ClosingBalance float64 `json:"closing_balance"`
 	Journals []models.Journal `json:"journals"`
 	CurrentTotal float64 `json:"current_total"`
+	DebitTotal float64 `json:"debit_total"`
+	CreditTotal float64 `json:"credit_total"`
 }
 
 type PostingService interface {
 	GetPostingHistoryForMasterDateWise( masterID int64, startDate string, endDate string) (HistoryResult, error)
+	DeleteJournal(int64) error
+	MakeOrUpdateJournal(journal models.AJournal)  ( models.AJournal ,error)
 }
 
 type postingService struct{
@@ -72,6 +76,8 @@ func (ps *postingService) GetPostingHistoryForMasterDateWise( masterID int64, st
 	rows, err := ps.DB.Query(QUERY, masterID, startDate, endDate)
 	var journals []models.Journal
 	var sumOfJournals float64 = 0
+	var sumOfDebits float64 = 0
+	var sumOfCredits float64 = 0
 	if err!=nil{
 		log.Println("No postings found")
 	}else{
@@ -83,6 +89,11 @@ func (ps *postingService) GetPostingHistoryForMasterDateWise( masterID int64, st
 				log.Println("Faied to scan a journal, exiting...")
 				return HistoryResult{}, nil
 			}
+			if temp.Amount <= 0 {
+				sumOfDebits += float64(temp.Amount)
+			} else{
+				sumOfCredits += float64(temp.Amount)
+			}
 			sumOfJournals += float64(temp.Amount)
 			journals = append(journals, temp)
 		}
@@ -91,6 +102,8 @@ func (ps *postingService) GetPostingHistoryForMasterDateWise( masterID int64, st
 	result.StartDate = startDate
 	result.EndDate = endDate
 	result.CurrentTotal = sumOfJournals
+	result.DebitTotal = sumOfDebits
+	result.CreditTotal = sumOfCredits
 
 	// calculate closing
 	closingBalance := sumScan + sumOfJournals
@@ -98,5 +111,48 @@ func (ps *postingService) GetPostingHistoryForMasterDateWise( masterID int64, st
 
 	return result, nil
 
+}
+
+func (ps *postingService) DeleteJournal( journalID int64) error{
+
+	tx, _ := ps.DB.Begin()
+	// delete postings
+	jrnl, err := models.FetchJournal(tx, int32(journalID))
+	if err!=nil{
+		log.Println("Failed to delete postings, rolling back")
+		tx.Rollback()
+		return err
+	}
+	// delete journal
+	err = jrnl.DeleteJournal(ps.DB)
+	if err!=nil{
+		log.Println("Failed to delete journal, rolling back")
+		tx.Rollback()
+		return err
+	}
+	tx.Commit()
+	return nil
+}
+
+func (ps *postingService) MakeOrUpdateJournal(journal models.AJournal)  ( models.AJournal ,error){
+
+	tx, _ := ps.DB.Begin()
+	if journal.ID == 0 {
+		err := journal.MakeJournal(tx)
+		if err!=nil{
+			log.Println("Failed to add a journal.", err.Error())
+			tx.Rollback()
+			return models.AJournal{},err
+		}
+	}else{
+		err := journal.UpdateJournalNew(tx)
+		if err!=nil{
+			log.Println("Failed to update the journal", err.Error())
+			tx.Rollback()
+			return models.AJournal{},err
+		}
+	}
+	tx.Commit()
+	return journal, nil
 }
 

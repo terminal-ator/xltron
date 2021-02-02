@@ -16,7 +16,7 @@ func GetStatementById(c *gin.Context) {
 	ErrorHandler(err, c)
 	// row := DB.QueryRow(ID_WISE_STATEMENT, id)
 	var statment models.Statement
-	err = statment.SqlSelectByID(DB, c, int32(iid))
+	err = statment.SqlSelectByID(DB, int64(iid))
 	ErrorHandler(err, c)
 	c.JSON(200, statment)
 }
@@ -40,7 +40,7 @@ func saveStatementToCustID(c *gin.Context) {
 	// fetch the details of the statement
 	log.Println("Fetching statement")
 	var statement models.Statement
-	err = statement.SqlSelectByID(DB, c, req.StatementID)
+	err = statement.SqlSelectByID(DB, int64(req.StatementID))
 	if err != nil {
 		log.Println("Unable to create statement")
 		c.String(500, "Failed")
@@ -100,14 +100,14 @@ func saveStatementToCustID(c *gin.Context) {
 
 			// create withdrawl post
 			bankPost := &models.Posting{JournalID: journal.ID,
-				MasterID: req.BankID, AssetType: "Rs.", Amount: -statement.Withdrawl.Float64, CompanyID: req.CompanyID}
+				MasterID: req.BankID, AssetType: "Rs.", Amount: statement.Withdrawl.Float64, CompanyID: req.CompanyID}
 			if bankPost.Save(tx) != nil {
 				tx.Rollback()
 				return
 			}
 
 			custPost := &models.Posting{JournalID: journal.ID,
-				MasterID: req.CustID, AssetType: "Rs.", Amount: statement.Withdrawl.Float64, CompanyID: req.CompanyID}
+				MasterID: req.CustID, AssetType: "Rs.", Amount: -statement.Withdrawl.Float64, CompanyID: req.CompanyID}
 			if custPost.Save(tx) != nil {
 				tx.Rollback()
 				return
@@ -115,14 +115,14 @@ func saveStatementToCustID(c *gin.Context) {
 
 		} else {
 			bankPost := &models.Posting{JournalID: journal.ID,
-				MasterID: req.BankID, AssetType: "Rs.", Amount: statement.Deposit.Float64, CompanyID: req.CompanyID}
+				MasterID: req.BankID, AssetType: "Rs.", Amount: -statement.Deposit.Float64, CompanyID: req.CompanyID}
 			if bankPost.Save(tx) != nil {
 				tx.Rollback()
 				return
 			}
 
 			custPost := &models.Posting{JournalID: journal.ID,
-				MasterID: req.CustID, AssetType: "Rs.", Amount: -statement.Deposit.Float64, CompanyID: req.CompanyID}
+				MasterID: req.CustID, AssetType: "Rs.", Amount: statement.Deposit.Float64, CompanyID: req.CompanyID}
 			if custPost.Save(tx) != nil {
 				tx.Rollback()
 				return
