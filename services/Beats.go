@@ -1,4 +1,4 @@
-package api
+package services
 
 import (
 	"github.com/terminal-ator/xltron/interfaces"

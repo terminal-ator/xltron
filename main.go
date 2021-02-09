@@ -2,8 +2,9 @@ package main
 
 import (
 	"database/sql"
-	"github.com/terminal-ator/xltron/api"
+	"github.com/gin-gonic/contrib/static"
 	"github.com/terminal-ator/xltron/handlers"
+	"github.com/terminal-ator/xltron/services"
 	"log"
 	"time"
 
@@ -39,6 +40,7 @@ func main() {
 	}
 
 	router := gin.Default()
+	router.Use(static.Serve("/",static.LocalFile("../keymint/build", true)))
 	r := router.Group("/api")
 	config := cors.DefaultConfig()
 	config.AllowAllOrigins = true
@@ -53,16 +55,14 @@ func main() {
 
 	handlers.InitStatement(r, DB)
 	r.GET("/groups", GetAllGroups)
-	r.POST("/upload", PostFileUploadDirect)
-	r.POST("/parseUpload", PutCsvToDB)
 	r.GET("/uplcompany/:company", GetCompanies)
-	receiptService := api.ConstructReceiptService(DB)
+	receiptService := services.ConstructReceiptService(DB)
 	receiptHandler := handlers.ConstructReceiptHandler(&receiptService)
 	r.POST("/ledger/:company", receiptHandler.PostReceipt)
 	r.GET("/ledger", GetLedgerForCustID)
 	r.PUT("/ledger/:company", QuickLedger)
 	r.GET("/istats/:id", GetStatementById)
-	r.POST("/upl", SalesUploadByExcel)
+	handlers.InitUpload(r, DB)
 	// new account logic
 	cheque := r.Group("/cheque")
 	{
@@ -77,7 +77,7 @@ func main() {
 	handlers.InitCompany(DB, r)
 
 	// beat logic
-	beatService := api.ConstructBeatService(DB)
+	beatService := services.ConstructBeatService(DB)
 	beatHandler := handlers.ConstructBeatHandler(&beatService)
 	beat := r.Group("/beats")
 	{
@@ -85,14 +85,9 @@ func main() {
 		beat.POST("/make/:name", beatHandler.PostQuickCreateBeat)
 	}
 	// new journal logic
-	postingService := api.ConstructPostingService(DB)
-	companyService := api.ConstructCompanyService(DB)
-	postingHandler := handlers.ConstructPostingHandler(&companyService, &postingService)
-	r.GET("/postings/:id", postingHandler.GetJournalsForID)
-	r.DELETE("/postings/:id", postingHandler.DeleteJournalID)
+	handlers.InitPosting(r, DB)
 	r.GET("/journal/:id", GetJournal)
 	r.GET("/journals", GetDayBook)
-	r.POST("/journal", postingHandler.UpdateJournal)
 	r.GET("/saveid", updateCUSTID)
 	handlers.InitMaster(r, DB)
 	r.GET("/beat/:company", FetchBeats)
@@ -100,6 +95,7 @@ func main() {
 	// error handler
 	r.GET("/errors/:company", GetErrorLedgers)
 	r.POST("/errors", MergeErrors)
+	router.Use(static.Serve("/*",static.LocalFile("../keymint/build",true)))
 	// users logic
 	handlers.InitUserHandlers(DB, r)
 	router.Run(":8080") // listen and serve on 0.0.0.0:8080

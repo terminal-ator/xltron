@@ -3,7 +3,7 @@ package handlers
 import (
 	"database/sql"
 	"github.com/gin-gonic/gin"
-	"github.com/terminal-ator/xltron/api"
+	"github.com/terminal-ator/xltron/services"
 	"github.com/terminal-ator/xltron/auth"
 	"github.com/terminal-ator/xltron/utils"
 	"log"
@@ -19,12 +19,12 @@ type CreateCompanyReq struct {
 }
 
 type CompanyHandler struct {
-	service api.CompanyService
+	service services.CompanyService
 }
 
 func InitCompany(DB *sql.DB, router *gin.RouterGroup) {
 
-	companyService := api.ConstructCompanyService(DB)
+	companyService := services.ConstructCompanyService(DB)
 	companyHandler := ConstructCompanyHandle(&companyService)
 
 	company := router.Group("/company")
@@ -38,7 +38,7 @@ func InitCompany(DB *sql.DB, router *gin.RouterGroup) {
 
 }
 
-func ConstructCompanyHandle(service api.CompanyService) CompanyHandler {
+func ConstructCompanyHandle(service services.CompanyService) CompanyHandler {
 	return CompanyHandler{
 		service: service,
 	}

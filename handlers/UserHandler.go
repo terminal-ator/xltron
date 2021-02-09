@@ -3,23 +3,23 @@ package handlers
 import (
 	"database/sql"
 	"github.com/gin-gonic/gin"
-	"github.com/terminal-ator/xltron/api"
+	"github.com/terminal-ator/xltron/services"
 	"github.com/terminal-ator/xltron/models"
 	"log"
 	"time"
 )
 
 type UserHandler struct {
-	DB *sql.DB
-	userService api.UserService
+	DB          *sql.DB
+	userService services.UserService
 }
 
-func ConstructUserHandler( userService api.UserService, DB *sql.DB) UserHandler{
+func ConstructUserHandler( userService services.UserService, DB *sql.DB) UserHandler{
 	return UserHandler{userService: userService, DB: DB}
 }
 
 func InitUserHandlers(DB *sql.DB, router *gin.RouterGroup){
-	userService := api.ConstructUserService(DB)
+	userService := services.ConstructUserService(DB)
 	userHandler := ConstructUserHandler(&userService, DB)
 
 	user := router.Group("/user")

@@ -2,17 +2,17 @@ package handlers
 
 import (
 	"github.com/gin-gonic/gin"
-	"github.com/terminal-ator/xltron/api"
+	"github.com/terminal-ator/xltron/services"
 	"github.com/terminal-ator/xltron/utils"
 	"log"
 	"strconv"
 )
 
 type BeatHandler struct {
-	service api.BeatService
+	service services.BeatService
 }
 
-func ConstructBeatHandler( service api.BeatService) BeatHandler{
+func ConstructBeatHandler( service services.BeatService) BeatHandler{
 	return BeatHandler{
 		service: service,
 	}

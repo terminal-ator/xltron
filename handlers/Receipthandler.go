@@ -2,23 +2,23 @@ package handlers
 
 import (
 	"github.com/gin-gonic/gin"
-	"github.com/terminal-ator/xltron/api"
+	"github.com/terminal-ator/xltron/services"
 	"log"
 	"net/http"
 	"strconv"
 	)
 
 type ReceiptRequest struct{
-	Date string `json:"date"`
-	ReceiptID int `json:"receipt_id"`
-	Entries []api.ReceiptEntry `json:"receipt_entry"`
+	Date string                     `json:"date"`
+	ReceiptID int                   `json:"receipt_id"`
+	Entries []services.ReceiptEntry `json:"receipt_entry"`
 }
 
 type ReceiptHandler struct {
-	service api.ReceiptService
+	service services.ReceiptService
 }
 
-func ConstructReceiptHandler(service api.ReceiptService) ReceiptHandler{
+func ConstructReceiptHandler(service services.ReceiptService) ReceiptHandler{
 	return ReceiptHandler{service: service}
 }
 

@@ -1,8 +1,10 @@
 package handlers
 
 import (
+	"database/sql"
 	"github.com/gin-gonic/gin"
-	"github.com/terminal-ator/xltron/api"
+	"github.com/terminal-ator/xltron/services"
+	"github.com/terminal-ator/xltron/auth"
 	"github.com/terminal-ator/xltron/models"
 	"log"
 	"strconv"
@@ -10,15 +12,26 @@ import (
 )
 
 type PostingHandler struct {
-	companyService api.CompanyService
-	postingService api.PostingService
+	companyService services.CompanyService
+	postingService services.PostingService
 }
 
-func ConstructPostingHandler(cService api.CompanyService, pService api.PostingService) PostingHandler{
+func ConstructPostingHandler(cService services.CompanyService, pService services.PostingService) PostingHandler{
 	return PostingHandler{
 		companyService: cService,
 		postingService: pService,
 	}
+}
+
+func InitPosting(r *gin.RouterGroup, db *sql.DB){
+	postingService := services.ConstructPostingService(db)
+	companyService := services.ConstructCompanyService(db)
+	postingHandler := ConstructPostingHandler(&companyService, &postingService)
+	postings := r.Group("/postings")
+	postings.Use(auth.CompanyTokenUser())
+	postings.GET("/:id",postingHandler.GetJournalsForID)
+	postings.DELETE("/:id",postingHandler.DeleteJournalID)
+	postings.POST("/", postingHandler.UpdateJournal)
 }
 
 

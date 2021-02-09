@@ -3,7 +3,7 @@ package handlers
 import (
 	"database/sql"
 	"github.com/gin-gonic/gin"
-	"github.com/terminal-ator/xltron/api"
+	"github.com/terminal-ator/xltron/services"
 	"github.com/terminal-ator/xltron/auth"
 	"github.com/terminal-ator/xltron/models"
 	"github.com/terminal-ator/xltron/utils"
@@ -11,16 +11,16 @@ import (
 )
 
 type MasterHandler struct {
-	service api.MasterService
+	service services.MasterService
 }
 
-func ConstructMasterHandler(service api.MasterService) MasterHandler{
+func ConstructMasterHandler(service services.MasterService) MasterHandler{
 	return MasterHandler{
 		service: service,
 	}
 }
 func InitMaster(r *gin.RouterGroup, DB *sql.DB){
-	masterService := api.ConstructMasterService(DB)
+	masterService := services.ConstructMasterService(DB)
 	masterHandler := ConstructMasterHandler(&masterService)
 	master:= r.Group("/master")
 	master.Use(auth.CompanyTokenUser())

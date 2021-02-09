@@ -3,7 +3,7 @@ package tests
 import (
 	"database/sql"
 	_ "github.com/lib/pq"
-	"github.com/terminal-ator/xltron/api"
+	"github.com/terminal-ator/xltron/services"
 	"testing"
 )
 
@@ -16,7 +16,7 @@ func TestGetStatements(t *testing.T){
 		t.Error("Unable to connect to the database")
 	}
 	defer db.Close()
-	statementService := api.ConstructStatementService(db,"Fake table")
+	statementService := services.ConstructStatementService(db,"Fake table")
 
 	stats, err := statementService.FetchStatementsForBankDateWise(1,8318,
 		"2020-12-01", "2021-01-01")
@@ -40,7 +40,7 @@ func TestGetStatementsWithoutDate(t *testing.T){
 		t.Error("Unable to connect to the database")
 	}
 	defer db.Close()
-	statementService := api.ConstructStatementService(db,"Fake table")
+	statementService := services.ConstructStatementService(db,"Fake table")
 
 	stats, err := statementService.FetchStatementsForBankDateWise(1,8318,
 		"", "")
@@ -65,7 +65,7 @@ func TestMoveStatementToVoucher(t *testing.T){
 		t.Error("Unable to connect to the database")
 	}
 	defer db.Close()
-	statementService := api.ConstructStatementService(db,"Fake table")
+	statementService := services.ConstructStatementService(db,"Fake table")
 
 	 err = statementService.MoveFromStatementToVoucher(
 	 		1572,

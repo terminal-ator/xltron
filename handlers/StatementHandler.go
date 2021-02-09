@@ -3,7 +3,7 @@ package handlers
 import (
 	"database/sql"
 	"github.com/gin-gonic/gin"
-	"github.com/terminal-ator/xltron/api"
+	"github.com/terminal-ator/xltron/services"
 	"github.com/terminal-ator/xltron/auth"
 	"github.com/terminal-ator/xltron/utils"
 	"io"
@@ -13,17 +13,17 @@ import (
 )
 
 type StatementHandler struct {
-	service api.StatementService
+	service services.StatementService
 }
 
-func ConstructStatementHandler(service api.StatementService) StatementHandler{
+func ConstructStatementHandler(service services.StatementService) StatementHandler{
 	return StatementHandler{
 		service: service,
 	}
 }
 
 func InitStatement(r *gin.RouterGroup, db *sql.DB){
-	service := api.ConstructStatementService(db,"")
+	service := services.ConstructStatementService(db,"")
 	handler := ConstructStatementHandler(&service)
 
 	statements := r.Group("/statements")

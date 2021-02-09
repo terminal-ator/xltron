@@ -230,7 +230,7 @@ func updateCUSTID(c *gin.Context) {
 	// 	}
 	// }
 
-	c.String(200, "This api has been removed")
+	c.String(200, "This services has been removed")
 }
 
 type NFloat64 sql.NullFloat64

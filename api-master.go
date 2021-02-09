@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"github.com/terminal-ator/xltron/api"
+	"github.com/terminal-ator/xltron/services"
 	"github.com/terminal-ator/xltron/models"
 	"log"
 	"strings"
@@ -190,7 +190,7 @@ func UpdateMaster(c *gin.Context) {
 
 
 	// update balance.
-	balanceError := api.PostEditOpeningBalance(DB, mstr.ID, Master.OpeningBalance)
+	balanceError := services.PostEditOpeningBalance(DB, mstr.ID, Master.OpeningBalance)
 
 	if balanceError!=nil{
 		log.Println("Failed to update opening balance.")
